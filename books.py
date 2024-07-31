@@ -141,13 +141,15 @@ class BookFile:
         if (('SERIES' in metadata) and ('PART' in metadata)): 
             book.series.append(Series(metadata["SERIES"],metadata["PART"]))
         #parse album, assume it's a series
-        book.series.append(Series(metadata["album"],0))
+        if 'album' in metadata: book.series.append(Series(metadata["album"],0))
         #parse authors
-        for author in list(metadata["artist"]):
-            book.authors.append(Contributor(author,[]))
+        if 'artist' in metadata: 
+            for author in list(metadata["artist"]):
+                book.authors.append(Contributor(author))
         #parse narrators
-        for narrator in list(metadata["composer"]):
-            book.narrators.append(Contributor(author,[]))
+        if 'composer' in metadata: 
+            for narrator in list(metadata["composer"]):
+                book.narrators.append(Contributor(narrator))
         #return a book object created from  ffprobe
         self.ffprobeBook=book
         return book
