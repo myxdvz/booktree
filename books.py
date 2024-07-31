@@ -70,7 +70,7 @@ class Audible:
         return Audible.auth
 
     @staticmethod
-    def disconnect(self):
+    def disconnect():
         # deregister device when done
         Audible.auth.deregister_device()
 
@@ -144,11 +144,11 @@ class BookFile:
         if 'album' in metadata: book.series.append(Series(metadata["album"],0))
         #parse authors
         if 'artist' in metadata: 
-            for author in list(metadata["artist"]):
+            for author in metadata["artist"].split(","):
                 book.authors.append(Contributor(author))
         #parse narrators
         if 'composer' in metadata: 
-            for narrator in list(metadata["composer"]):
+            for narrator in metadata["composer"].split(","):
                 book.narrators.append(Contributor(narrator))
         #return a book object created from  ffprobe
         self.ffprobeBook=book
