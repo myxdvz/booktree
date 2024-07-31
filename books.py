@@ -77,7 +77,7 @@ class Audible:
 @dataclass
 class Contributor:
     name:str
-    books:list[int]= field(default_factory=list)
+    #books:list[int]= field(default_factory=list)
 
 #Series Class
 @dataclass
