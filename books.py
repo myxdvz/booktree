@@ -71,8 +71,12 @@ class Audible:
 
     @staticmethod
     def disconnect():
-        # deregister device when done
-        Audible.auth.deregister_device()
+        try:
+            # deregister device when done
+            Audible.auth.deregister_device()
+        except:
+            #ignore
+            return
 
 #Author and Narrator Classes
 @dataclass
