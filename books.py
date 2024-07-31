@@ -6,6 +6,7 @@ import json
 import os, sys, subprocess, shlex, re
 from subprocess import call
 from pathlib import Path
+from pprint import pprint
 
 #Audible Functions
 class Audible:
@@ -159,7 +160,7 @@ class BookFile:
                 book.narrators.append(Contributor(narrator))
         #return a book object created from  ffprobe
         self.ffprobeBook=book
-        print (book)
+        pprint (book)
         return book
     
     def __getAudibleBook(self, product):
@@ -183,7 +184,7 @@ class BookFile:
                     #if this relationship is a series
                     if (relationship["relationship_type"] == "series"):
                         book.series.append(Series(relationship["title"], relationship["sequence"]))
-            print (book)
+            pprint (book)
             return book
         else:
             return None
@@ -215,7 +216,7 @@ class BookFile:
             if (len(self.audibleMatches) > 0):
                 for book in self.audibleMatches:
                     # 1) Check if the titles match
-                    print ("Probe: {} and Audible: {}")
+                    # print ("Probe: {} and Audible: {}")
                     if ((ffprobeBook.title == book.title) or (ffprobeBook.getFullTitle() == book.getFullTitle())):
                         self.isMatched=True
                         self.audibleMatch=book
@@ -233,6 +234,8 @@ class BookFile:
         else:
             paths.append("/{}/{}".format(self.audibleMatch.author[0].name, self.audibleMatch.title))   
         return paths  
+    
+    def prettify(self):
     
 def findFiles(path):
     files=list[BookFile]
