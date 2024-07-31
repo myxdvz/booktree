@@ -77,7 +77,7 @@ class Audible:
 @dataclass
 class Contributor:
     name:str
-    books:list[int]
+    books:list[int]= field(default_factory=list)
 
 #Series Class
 @dataclass
@@ -100,10 +100,10 @@ class Book:
     publicationName:str
     length:int
     duration:str
-    series:list[Series]
-    authors:list[Contributor]
-    narrators:list[Contributor]
-    files:list=[]
+    series:list[Series]= field(default_factory=list)
+    authors:list[Contributor]= field(default_factory=list)
+    narrators:list[Contributor]= field(default_factory=list)
+    files:list=[]= field(default_factory=list)
 
     def addFiles(self, file):
         self.files.append(file)
