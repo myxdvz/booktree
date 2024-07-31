@@ -264,10 +264,12 @@ def main():
         bf.matchBook()
         # if there is match, put it in the to be hardlinked pile
         if bf.isMatched:
-            print ("Match found {}", bf.audibleMatch)
+            print ("Match found")
+            pprint(bf.audibleMatch)
             matchedFiles.append(bf)
         else:
-            print ("No Match found {}", bf.ffprobeBook)
+            print ("No Match found")
+            pprint(bf.ffprobeBook)
             unmatchedFiles.append(bf)
  
     #for files with matches, hardlink them
