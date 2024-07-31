@@ -10,10 +10,6 @@ from pprint import pprint
 
 #Audible Functions
 class Audible:
-    auth=None
-    client=None 
-    isAuthenticated=False
-    
     @staticmethod
     def connect(username, password) -> None:
         if (Audible.isAuthenticated == True):
