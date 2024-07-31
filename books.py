@@ -201,7 +201,7 @@ class BookFile:
                     self.audibleMatches.append(self.__getAudibleBook(book))
 
             # check if there's an actual Match from Audible
-            if self.audibleMatches.count > 0:
+            if (self.audibleMatches.count() > 0):
                 for book in self.audibleMatches:
                     # 1) Check if the titles match
                     if (ffprobeBook.title == book.title):
