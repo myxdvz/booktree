@@ -134,7 +134,7 @@ class BookFile:
         # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
         #{'format': {'tags': {'title': 'MatchUp', 'artist': 'Lee Child - editor, Val McDermid, Charlaine Harris, John Sandford, Kathy Reichs', 'composer': 'Laura Benanti, Dennis Boutsikaris, Gerard Doyle, Linda Emond, January LaVoy, Robert Petkoff, Lee Child', 'album': 'MatchUp'}}}
         book=Book()
-        if 'asin' in metadata: book.asin=metadata["ADUIBLE_ASIN"]
+        if 'AUDIBLE_ASIN' in metadata: book.asin=metadata["AUDIBLE_ASIN"]
         if 'title' in metadata: book.title=metadata["title"]
         if 'subtitle' in metadata: book.subtitle=metadata["subtitle"]
         #series and part, if provided
