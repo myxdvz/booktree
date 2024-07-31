@@ -116,7 +116,7 @@ class BookFile:
     sourcePath:str
     isMatched:bool=False
     isHardlinked:bool=False
-    audibleMatches:list[Book]
+    audibleMatches:list[Book]=field(default_factory=list)
     audibleMatch:Book
     ffprobeBook:Book
 
