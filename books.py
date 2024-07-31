@@ -161,8 +161,8 @@ class BookFile:
     
     def __getAudibleBook(self, product):
         #product is an Audible product json
+        book=Book()
         if product is not None:
-            book=Book()
             if 'asin' in product: book.asin=product["asin"]
             if 'title' in product: book.title=product["title"]
             if 'subtitle' in product: book.subtitle=product["subtitle"]
