@@ -129,23 +129,24 @@ class BookFile:
     
     def ffprobe(self):
         #ffprobe the file
-        metadata=self.__probe_file()
+        metadata=self.__probe_file()["format"]["tags"]
         #parse and create a book object
         # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
         #{'format': {'tags': {'title': 'MatchUp', 'artist': 'Lee Child - editor, Val McDermid, Charlaine Harris, John Sandford, Kathy Reichs', 'composer': 'Laura Benanti, Dennis Boutsikaris, Gerard Doyle, Linda Emond, January LaVoy, Robert Petkoff, Lee Child', 'album': 'MatchUp'}}}
         book=Book()
-        book.asin=metadata["format"]["tags"]["ADUIBLE_ASIN"]
-        book.title=metadata["format"]["tags"]["title"]
-        book.subtitle=metadata["format"]["tags"]["title"]
+        if 'asin' in metadata: book.asin=metadata["ADUIBLE_ASIN"]
+        if 'title' in metadata: book.title=metadata["title"]
+        if 'subtitle' in metadata: book.subtitle=metadata["subtitle"]
         #series and part, if provided
-        book.series.append(Series(metadata["format"]["tags"]["SERIES"],metadata["format"]["tags"]["PART"]))
+        if (('SERIES' in metadata) and ('PART' in metadata)): 
+            book.series.append(Series(metadata["SERIES"],metadata["PART"]))
         #parse album, assume it's a series
-        book.series.append(Series(metadata["format"]["tags"]["album"],0))
+        book.series.append(Series(metadata["album"],0))
         #parse authors
-        for author in list(metadata["format"]["tags"]["artist"]):
+        for author in list(metadata["artist"]):
             book.authors.append(Contributor(author,[]))
         #parse narrators
-        for narrator in list(metadata["format"]["tags"]["composer"]):
+        for narrator in list(metadata["composer"]):
             book.narrators.append(Contributor(author,[]))
         #return a book object created from  ffprobe
         self.ffprobeBook=book
