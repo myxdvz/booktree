@@ -9,75 +9,60 @@ from pathlib import Path
 from pprint import pprint
 
 #MyAudible Functions
-class MyAudible:
-    auth:object
-    client:object
-    isAuthenticated:bool=False
+def audibleConnect(username, password) -> None:
+    #authenticate
+    auth = authenticateByLogin(username, password)
+    client = audible.Client(auth)    
+    return (auth, client) 
 
-    @staticmethod
-    def connect(username, password) -> None:
-        #authenticate
-        if MyAudible.isAuthenticated == False :
-            MyAudible.auth = MyAudible.authenticateByLogin(username, password)
+def getBookByAsin(client, asin):
+    print ("getBookByASIN: {}}", asin)
+    try:
+        book = client.get (
+            path=f"catalog/products/{asin}",
+            params={
+                "response_groups": (
+                    "sku, series, product_attrs, relationships, contributors,"
+                    "product_extended_attrs, product_desc, product_plan_details"
+                )
+            },
+        )
+        return book["product"]
+    except Exception as e:
+        print(e)
 
-        MyAudible.client = audible.Client(MyAudible.auth)       
+def getBookByAuthorTitle(client, author, title):
+    print ("getBookByAuthorTitle: {}, {}", author, title)
+    enBooks=[]
+    try:
+        books = client.get (
+            path=f"catalog/products",
+            params={
+                "author": author,
+                "title": title,
+                "response_groups": (
+                    "sku, series, product_attrs, relationships, contributors,"
+                    "product_extended_attrs, product_desc, product_plan_details"
+                )
+            },
+        )
+        for book in books["products"]:
+            #ignore non-english books
+            if (book["language"] == "english"):
+                enBooks.append(book)
 
-    @staticmethod
-    def getBookByAsin(asin):
-        print ("getBookByASIN: {}}", asin)
-        try:
-            book = MyAudible.client.get (
-                path=f"catalog/products/{asin}",
-                params={
-                    "response_groups": (
-                        "sku, series, product_attrs, relationships, contributors,"
-                        "product_extended_attrs, product_desc, product_plan_details"
-                    )
-                },
-            )
-            return book["product"]
-        except Exception as e:
-            print(e)
+        print("Found {} books", len(enBooks))
+        return enBooks
+    except Exception as e:
+        print(e)
 
-    @staticmethod
-    def getBookByAuthorTitle(author, title):
-        print ("getBookByAuthorTitle: {}, {}", author, title)
-        enBooks=[]
-        try:
-            books = MyAudible.client.get (
-                path=f"catalog/products",
-                params={
-                    "author": author,
-                    "title": title,
-                    "response_groups": (
-                        "sku, series, product_attrs, relationships, contributors,"
-                        "product_extended_attrs, product_desc, product_plan_details"
-                    )
-                },
-            )
-            for book in books["products"]:
-                #ignore non-english books
-                if (book["language"] == "english"):
-                    enBooks.append(book)
+def authenticateByLogin(username, password):
+    auth = audible.Authenticator.from_login(username, password, locale="us")
+    return auth
 
-            print("Found {} books", len(enBooks))
-            return enBooks
-        except Exception as e:
-            print(e)
-
-    @staticmethod
-    def authenticateByLogin(username, password):
-        MyAudible.auth = audible.Authenticator.from_login(username, password, locale="us")
-        return MyAudible.auth
-
-    @staticmethod
-    def disconnect():
-        try:
-            # deregister device when done
-            MyAudible.auth.deregister_device()
-        except:
-            #ignore
-            return
+def audibleDisconnect(auth):
+    # deregister device when done
+    auth.deregister_device()
 
 #Author and Narrator Classes
 @dataclass
@@ -196,17 +181,17 @@ class BookFile:
         ffprobeBook=self.ffprobe()
 
         #if asin is provided, get Audible by ASIN
-        MyAudible.connect("delunamarie@gmail.com", "##Abc123@m@z0n")
+        auth, client = audibleConnect("delunamarie@gmail.com", "##Abc123@m@z0n")
         if len(ffprobeBook.asin) > 0:
             print ("Getting Book by ASIN ", ffprobeBook.asin)
-            book=self.__getAudibleBook(Audible.getBookByAsin(ffprobeBook.asin))
+            book=self.__getAudibleBook(getBookByAsin(client, ffprobeBook.asin))
             if book is not None:
                 self.audibleMatch=book
                 self.isMatched=True
         else:
             # find book by author or title
             print ("Getting Book by Title: {}, {}", ffprobeBook.authors[0].name, ffprobeBook.title )
-            books=Audible.getBookByAuthorTitle(ffprobeBook.authors[0].name, ffprobeBook.title)
+            books=getBookByAuthorTitle(client, ffprobeBook.authors[0].name, ffprobeBook.title)
             if books is not None:
                 print ("Found {} books", len(books))
                 for book in books:
@@ -220,7 +205,7 @@ class BookFile:
                     if ((ffprobeBook.title == book.title) or (ffprobeBook.getFullTitle() == book.getFullTitle())):
                         self.isMatched=True
                         self.audibleMatch=book
-        MyAudible.disconnect()
+        audibleDisconnect(auth)
 
     def hardlinkFile(self):
         return self.isHardlinked
