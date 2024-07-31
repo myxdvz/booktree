@@ -184,7 +184,9 @@ class BookFile:
                     if (relationship["relationship_type"] == "series"):
                         book.series.append(Series(relationship["title"], relationship["sequence"]))
             print (book)
-        return book
+            return book
+        else:
+            return None
 
     def matchBook(self):
         #given book file, ffprobe and audiblematches, return the best match
