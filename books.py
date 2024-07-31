@@ -27,9 +27,9 @@ def authenticateByLogin(authFilename, username, password):
     return auth
 
 def audibleConnect(username, password) -> None:
-    filename="/config/code/myxrename/maried.json"
-    auth = authenticateByLogin(filename, "delunamarie@gmail.com", "##Abc123@m@z0n")
-    client = audible.Client(auth)
+    filename="/config/code/booktree/maried.json"
+    auth = authenticateByLogin(filename, username, password)
+    client = audible.Client(auth) 
     return (auth, client) 
 
 def getBookByAsin(client, asin):
@@ -187,14 +187,14 @@ class BookFile:
         else:
             return None
 
-    def matchBook(self):
+    def matchBook(self, client):
         #given book file, ffprobe and audiblematches, return the best match
         
         #first, read the ID tags
         ffprobeBook=self.ffprobe()
 
         #if asin is provided, get Audible by ASIN
-        auth, client = audibleConnect("delunamarie@gmail.com", "##Abc123@m@z0n")
+        # auth, client = audibleConnect("delunamarie@gmail.com", "##Abc123@m@z0n")
         if len(ffprobeBook.asin) > 0:
             print ("Getting Book by ASIN ", ffprobeBook.asin)
             book=self.__getAudibleBook(getBookByAsin(client, ffprobeBook.asin))
@@ -218,7 +218,7 @@ class BookFile:
                     if ((ffprobeBook.title == book.title) or (ffprobeBook.getFullTitle() == book.getFullTitle())):
                         self.isMatched=True
                         self.audibleMatch=book
-        audibleDisconnect(auth)
+        #audibleDisconnect(auth)
 
     def hardlinkFile(self):
         return self.isHardlinked
@@ -248,6 +248,12 @@ def main():
     matchedFiles=[]
     unmatchedFiles=[]
 
+    print ("Authenticating...\r\n")
+    filename="/config/code/myxrename/maried.json"
+    #auth = authenticateByFile(filename)
+    auth = authenticateByLogin(filename, "delunamarie@gmail.com", "##Abc123@m@z0n")
+    client = audible.Client(auth)
+
     #find all m4b files and attempt to get metadata
     for f in Path(path).rglob('*.m4b'):
         fullpath=f.absolute()
@@ -259,7 +265,7 @@ def main():
         # bf.ffprobe()
         # do an audible match
         print ("Performing ffprobe and audible match...")
-        bf.matchBook()
+        bf.matchBook(client)
         # if there is match, put it in the to be hardlinked pile
         if bf.isMatched:
             print ("Match found")
@@ -270,6 +276,9 @@ def main():
             pprint(bf.ffprobeBook)
             unmatchedFiles.append(bf)
  
+    # deregister device when done
+    auth.deregister_device()
+
     #for files with matches, hardlink them
     for f in matchedFiles:
         bf.hardlinkFile()
