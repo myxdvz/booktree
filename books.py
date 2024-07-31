@@ -231,8 +231,8 @@ def findFiles(path):
 def main():
     path="/data/torrents/complete/audiobooks"
 
-    matchedFiles=list[BookFile]
-    unmatchedFiles=list[BookFile]
+    matchedFiles=[]
+    unmatchedFiles=[]
 
     #find all m4b files and attempt to get metadata
     for f in Path(path).rglob('*.m4b'):
