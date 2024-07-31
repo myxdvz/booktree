@@ -73,10 +73,6 @@ def getBookByAuthorTitle(client, author, title):
     except Exception as e:
         print(e)
 
-def authenticateByLogin(username, password):
-    auth = audible.Authenticator.from_login(username, password, locale="us")
-    return auth
-
 def audibleDisconnect(auth):
     # deregister device when done
     auth.deregister_device()
