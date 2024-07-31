@@ -40,7 +40,7 @@ class Audible:
 
     @staticmethod
     def getBookByAuthorTitle(author, title):
-        print ("getBookByAuthorTitle: {} {}", author, title)
+        printf ("getBookByAuthorTitle: {}, {}", author, title)
         enBooks=[]
         try:
             books = Audible.client.get (
@@ -113,6 +113,9 @@ class Book:
     def addFiles(self, file):
         self.files.append(file)
 
+    def getFullTitle(self):
+        return self.title + ": " + self.subtitle
+
 #Book File Class
 @dataclass
 class BookFile:
@@ -161,8 +164,9 @@ class BookFile:
     
     def __getAudibleBook(self, product):
         #product is an Audible product json
-        book=Book()
+        print ("Creating a book object for ", product)
         if product is not None:
+            book=Book()
             if 'asin' in product: book.asin=product["asin"]
             if 'title' in product: book.title=product["title"]
             if 'subtitle' in product: book.subtitle=product["subtitle"]
@@ -179,7 +183,7 @@ class BookFile:
                     #if this relationship is a series
                     if (relationship["relationship_type"] == "series"):
                         book.series.append(Series(relationship["title"], relationship["sequence"]))
-        print (book)
+            print (book)
         return book
 
     def matchBook(self):
@@ -191,12 +195,15 @@ class BookFile:
         #if asin is provided, get Audible by ASIN
         Audible.connect("delunamarie@gmail.com", "##Abc123@m@z0n")
         if len(ffprobeBook.asin) > 0:
+            print ("Getting Book by ASIN ", ffprobeBook.asin)
             self.audibleMatch=self.__getAudibleBook(Audible.getBookByAsin(ffprobeBook.asin))
             self.isMatched=(len(self.audibleMatch.title) > 0)
         else:
             # find book by author or title
+            print ("Getting Book by Title: {}, {}", ffprobeBook.authors[0].name, ffprobeBook.title )
             books=Audible.getBookByAuthorTitle(ffprobeBook.authors[0].name, ffprobeBook.title)
             if books is not None:
+                print ("Found {} books", len(books))
                 for book in books:
                     self.audibleMatches.append(self.__getAudibleBook(book))
 
@@ -204,7 +211,8 @@ class BookFile:
             if (len(self.audibleMatches) > 0):
                 for book in self.audibleMatches:
                     # 1) Check if the titles match
-                    if (ffprobeBook.title == book.title):
+                    print ("Probe: {} and Audible: {}")
+                    if ((ffprobeBook.title == book.title) or (ffprobeBook.getFullTitle() == book.getFullTitle())):
                         self.isMatched=True
                         self.audibleMatch=book
         Audible.disconnect()
