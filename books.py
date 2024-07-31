@@ -235,7 +235,7 @@ class BookFile:
             paths.append("/{}/{}".format(self.audibleMatch.author[0].name, self.audibleMatch.title))   
         return paths  
     
-    def prettify(self):
+
     
 def findFiles(path):
     files=list[BookFile]
