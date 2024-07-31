@@ -103,7 +103,7 @@ class Book:
     series:list[Series]= field(default_factory=list)
     authors:list[Contributor]= field(default_factory=list)
     narrators:list[Contributor]= field(default_factory=list)
-    files:list=[]= field(default_factory=list)
+    files:list[]= field(default_factory=list)
 
     def addFiles(self, file):
         self.files.append(file)
