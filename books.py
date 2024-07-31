@@ -152,6 +152,7 @@ class BookFile:
                 book.narrators.append(Contributor(narrator))
         #return a book object created from  ffprobe
         self.ffprobeBook=book
+        print (book)
         return book
     
     def __getAudibleBook(self, product):
@@ -174,6 +175,7 @@ class BookFile:
                     #if this relationship is a series
                     if (relationship["relationship_type"] == "series"):
                         book.series.append(Series(relationship["title"], relationship["sequence"]))
+        print (book)
         return book
 
     def matchBook(self):
@@ -189,8 +191,10 @@ class BookFile:
             self.isMatched=(len(self.audibleMatch.title) > 0)
         else:
             # find book by author or title
-            for book in Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title):
-                self.audibleMatches.append(self.__getAudibleBook(book))
+            books=Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title)
+            if book is not None:
+                for book in Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title):
+                    self.audibleMatches.append(self.__getAudibleBook(book))
 
             # check if there's an actual Match from Audible
             for book in self.audibleMatches:
