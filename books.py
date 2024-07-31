@@ -197,7 +197,7 @@ class BookFile:
             # find book by author or title
             books=Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title)
             if books is not None:
-                for book in Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title):
+                for book in Audible.getBookByAuthorTitle(ffprobeBook.authors[0].name, ffprobeBook.title):
                     self.audibleMatches.append(self.__getAudibleBook(book))
 
             # check if there's an actual Match from Audible
@@ -216,9 +216,9 @@ class BookFile:
         #Does this book belong in a series?
         if (len(self.audibleMatch.series) > 0):
             for s in self.audibleMatch.series:
-                paths.append("/{}/{}/{}".format(self.audibleMatch.author, s.name, "{} - {}".format(s.part, self.audibleMatch.title)))
+                paths.append("/{}/{}/{}".format(self.audibleMatch.authors[0].name, s.name, "{} - {}".format(s.part, self.audibleMatch.title)))
         else:
-            paths.append("/{}/{}".format(self.audibleMatch.author, self.audibleMatch.title))   
+            paths.append("/{}/{}".format(self.audibleMatch.author[0].name, self.audibleMatch.title))   
         return paths  
     
 def findFiles(path):
