@@ -250,8 +250,8 @@ def main():
 
     print ("Authenticating...\r\n")
     filename="/config/code/myxrename/maried.json"
-    #auth = authenticateByFile(filename)
-    auth = authenticateByLogin(filename, "delunamarie@gmail.com", "##Abc123@m@z0n")
+    auth = authenticateByFile(filename)
+    #auth = authenticateByLogin(filename, "delunamarie@gmail.com", "##Abc123@m@z0n")
     client = audible.Client(auth)
 
     #find all m4b files and attempt to get metadata
