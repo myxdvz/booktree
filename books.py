@@ -249,7 +249,7 @@ def main():
     unmatchedFiles=[]
 
     print ("Authenticating...\r\n")
-    filename="/config/code/myxrename/maried.json"
+    filename="/config/code/booktree/maried.json"
     auth = authenticateByFile(filename)
     #auth = authenticateByLogin(filename, "delunamarie@gmail.com", "##Abc123@m@z0n")
     client = audible.Client(auth)
