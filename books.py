@@ -95,12 +95,12 @@ class Series:
 #Book Class
 @dataclass
 class Book:
-    asin:str
-    title:str
-    subtitle:str
-    publicationName:str
-    length:int
-    duration:str
+    asin:str=""
+    title:str=""
+    subtitle:str=""
+    publicationName:str=""
+    length:int=0
+    duration:str=""
     series:list[Series]= field(default_factory=list)
     authors:list[Contributor]= field(default_factory=list)
     narrators:list[Contributor]= field(default_factory=list)
