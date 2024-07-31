@@ -192,7 +192,7 @@ class BookFile:
         else:
             # find book by author or title
             books=Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title)
-            if book is not None:
+            if books is not None:
                 for book in Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title):
                     self.audibleMatches.append(self.__getAudibleBook(book))
 
@@ -233,16 +233,21 @@ def main():
     #find all m4b files and attempt to get metadata
     for f in Path(path).rglob('*.m4b'):
         fullpath=f.absolute()
+        print ("Processing {} {}", fullpath, f)
         # create a Book File object and add it to the list of files to be processed
         bf=BookFile(f, fullpath)
         # probe this file
+        print ("Performing ffprobe...")
         bf.ffprobe()
         # do an audible match
+        print ("Performing audible match...")
         bf.matchBook()
         # if there is match, put it in the to be hardlinked pile
         if bf.isMatched:
+            print ("Match found {}", bf.audibleMatch)
             matchedFiles.append(bf)
         else:
+            print ("No Match found {}", bf.ffprobeBook)
             unmatchedFiles.append(bf)
  
     #for files with matches, hardlink them
