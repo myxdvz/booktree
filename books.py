@@ -10,13 +10,18 @@ from pprint import pprint
 
 #Audible Functions
 class Audible:
+    auth:object
+    client:object
+    isAuthenticated:bool=False
+
     @staticmethod
     def connect(username, password) -> None:
-        if (Audible.isAuthenticated == True):
-            #authenticate
-            return Audible.authenticateByLogin(username, password)
-        else:
-            return Audible.auth
+        #authenticate
+        if Audible.isAuthenticated == False :
+            Audible.auth = Audible.authenticateByLogin(username, password)
+
+        Audible.client = audible.Client(Audible.auth)
+            
 
     @staticmethod
     def getBookByAsin(asin):
