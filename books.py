@@ -8,8 +8,8 @@ from subprocess import call
 from pathlib import Path
 from pprint import pprint
 
-#Audible Functions
-class Audible:
+#MyAudible Functions
+class MyAudible:
     auth:object
     client:object
     isAuthenticated:bool=False
@@ -17,17 +17,16 @@ class Audible:
     @staticmethod
     def connect(username, password) -> None:
         #authenticate
-        if Audible.isAuthenticated == False :
-            Audible.auth = Audible.authenticateByLogin(username, password)
+        if MyAudible.isAuthenticated == False :
+            MyAudible.auth = MyAudible.authenticateByLogin(username, password)
 
-        Audible.client = audible.Client(Audible.auth)
-            
+        MyAudible.client = audible.Client(MyAudible.auth)       
 
     @staticmethod
     def getBookByAsin(asin):
         print ("getBookByASIN: {}}", asin)
         try:
-            book = Audible.client.get (
+            book = MyAudible.client.get (
                 path=f"catalog/products/{asin}",
                 params={
                     "response_groups": (
@@ -45,7 +44,7 @@ class Audible:
         print ("getBookByAuthorTitle: {}, {}", author, title)
         enBooks=[]
         try:
-            books = Audible.client.get (
+            books = MyAudible.client.get (
                 path=f"catalog/products",
                 params={
                     "author": author,
@@ -68,14 +67,14 @@ class Audible:
 
     @staticmethod
     def authenticateByLogin(username, password):
-        Audible.auth = audible.Authenticator.from_login(username, password, locale="us")
-        return Audible.auth
+        MyAudible.auth = audible.Authenticator.from_login(username, password, locale="us")
+        return MyAudible.auth
 
     @staticmethod
     def disconnect():
         try:
             # deregister device when done
-            Audible.auth.deregister_device()
+            MyAudible.auth.deregister_device()
         except:
             #ignore
             return
