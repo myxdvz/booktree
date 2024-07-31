@@ -195,17 +195,18 @@ class BookFile:
             self.isMatched=(len(self.audibleMatch.title) > 0)
         else:
             # find book by author or title
-            books=Audible.getBookByAuthorTitle(ffprobeBook.authors, ffprobeBook.title)
+            books=Audible.getBookByAuthorTitle(ffprobeBook.authors[0].name, ffprobeBook.title)
             if books is not None:
-                for book in Audible.getBookByAuthorTitle(ffprobeBook.authors[0].name, ffprobeBook.title):
+                for book in books:
                     self.audibleMatches.append(self.__getAudibleBook(book))
 
             # check if there's an actual Match from Audible
-            for book in self.audibleMatches:
-                # 1) Check if the titles match
-                if (ffprobeBook.title == book.title):
-                    self.isMatched=True
-                    self.audibleMatch=book
+            if self.audibleMatches.count > 0:
+                for book in self.audibleMatches:
+                    # 1) Check if the titles match
+                    if (ffprobeBook.title == book.title):
+                        self.isMatched=True
+                        self.audibleMatch=book
         Audible.disconnect()
 
     def hardlinkFile(self):
@@ -241,10 +242,10 @@ def main():
         # create a Book File object and add it to the list of files to be processed
         bf=BookFile(f, fullpath)
         # probe this file
-        print ("Performing ffprobe...")
-        bf.ffprobe()
+        # print ("Performing ffprobe...")
+        # bf.ffprobe()
         # do an audible match
-        print ("Performing audible match...")
+        print ("Performing ffprobe and audible match...")
         bf.matchBook()
         # if there is match, put it in the to be hardlinked pile
         if bf.isMatched:
