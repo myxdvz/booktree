@@ -196,7 +196,7 @@ class BookFile:
         ffprobeBook=self.ffprobe()
 
         #if asin is provided, get Audible by ASIN
-        Audible.connect("delunamarie@gmail.com", "##Abc123@m@z0n")
+        MyAudible.connect("delunamarie@gmail.com", "##Abc123@m@z0n")
         if len(ffprobeBook.asin) > 0:
             print ("Getting Book by ASIN ", ffprobeBook.asin)
             book=self.__getAudibleBook(Audible.getBookByAsin(ffprobeBook.asin))
@@ -220,7 +220,7 @@ class BookFile:
                     if ((ffprobeBook.title == book.title) or (ffprobeBook.getFullTitle() == book.getFullTitle())):
                         self.isMatched=True
                         self.audibleMatch=book
-        Audible.disconnect()
+        MyAudible.disconnect()
 
     def hardlinkFile(self):
         return self.isHardlinked
