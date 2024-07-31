@@ -1,5 +1,6 @@
 
 from dataclasses import dataclass
+from dataclasses import field
 import audible
 import json
 import os, sys, subprocess, shlex, re
