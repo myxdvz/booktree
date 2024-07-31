@@ -1,7 +1,7 @@
 
+import audible
 from dataclasses import dataclass
 from dataclasses import field
-import audible
 import json
 import os, sys, subprocess, shlex, re
 from subprocess import call
@@ -9,10 +9,27 @@ from pathlib import Path
 from pprint import pprint
 
 #MyAudible Functions
+def authenticateByFile(authFilename):
+    auth = audible.Authenticator.from_file(authFilename)
+    return auth
+
+def authenticateByLogin(authFilename, username, password):
+    auth = audible.Authenticator.from_login(username, password, locale="us")
+
+    # store credentials to file
+    auth.to_file(filename=authFilename, encryption="json", password=password)
+
+    # save again
+    auth.to_file()
+
+    # load credentials from file
+    auth = audible.Authenticator.from_file(filename=authFilename, password=password)
+    return auth
+
 def audibleConnect(username, password) -> None:
-    #authenticate
-    auth = authenticateByLogin(username, password)
-    client = audible.Client(auth)    
+    filename="/config/code/myxrename/maried.json"
+    auth = authenticateByLogin(filename, "delunamarie@gmail.com", "##Abc123@m@z0n")
+    client = audible.Client(auth)
     return (auth, client) 
 
 def getBookByAsin(client, asin):
