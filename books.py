@@ -40,7 +40,7 @@ class Audible:
 
     @staticmethod
     def getBookByAuthorTitle(author, title):
-        printf ("getBookByAuthorTitle: {}, {}", author, title)
+        print ("getBookByAuthorTitle: {}, {}", author, title)
         enBooks=[]
         try:
             books = Audible.client.get (
