@@ -198,8 +198,10 @@ class BookFile:
         Audible.connect("delunamarie@gmail.com", "##Abc123@m@z0n")
         if len(ffprobeBook.asin) > 0:
             print ("Getting Book by ASIN ", ffprobeBook.asin)
-            self.audibleMatch=self.__getAudibleBook(Audible.getBookByAsin(ffprobeBook.asin))
-            self.isMatched=(len(self.audibleMatch.title) > 0)
+            book=self.__getAudibleBook(Audible.getBookByAsin(ffprobeBook.asin))
+            if book is not None:
+                self.audibleMatch=book
+                self.isMatched=True
         else:
             # find book by author or title
             print ("Getting Book by Title: {}, {}", ffprobeBook.authors[0].name, ffprobeBook.title )
