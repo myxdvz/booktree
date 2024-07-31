@@ -116,9 +116,9 @@ class BookFile:
     sourcePath:str
     isMatched:bool=False
     isHardlinked:bool=False
+    audibleMatch:Book=None
+    ffprobeBook:Book=None
     audibleMatches:list[Book]=field(default_factory=list)
-    audibleMatch:Book
-    ffprobeBook:Book
 
     def __probe_file(self):
         #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
