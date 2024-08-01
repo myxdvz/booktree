@@ -470,7 +470,14 @@ class BookFile:
         return book
     
 def createHardLinks(bookFiles:list[BookFile], targetFolder="", dryRun=False):
+    #hard link all the books in the list
     for f in bookFiles:
+        #use Audible metadata or ID3 metadata
+        if f.isMatched:
+            book=f.audibleMatch
+        else:
+            book=f.ffprobeBook
+        #if a book belongs to multiple series, hardlink them to tall series
         for p in f.getTargetPaths(f.audibleMatch):
             if (not dryRun):
                 f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
@@ -552,12 +559,16 @@ def main():
     auth.deregister_device()
 
     #for files with matches, hardlink them
-    print ("Creating hard links...")
-    createHardLinks(matchedFiles, mediaPath)
+    #print ("Creating hard links for matched files...")
+    #createHardLinks(matchedFiles, mediaPath)
 
     #log matched files
     print ("Logging matched books...")
     logBookRecords(logfile, matchedFiles)
+
+    #for files with matches, hardlink them
+    print ("Creating hard links for matched files...")
+    createHardLinks(unmatchedFiles, mediaPath)
 
     #log unmatched files
     print ("Logging unmatched books...")
