@@ -329,8 +329,9 @@ class BookFile:
             else:
                 author=ffprobeBook.authors[0].name
 
-            #Use Case:  Bad ID3 tags, Use Parent Folder, assume it's the title and/or the author
+            #Use Case:  If title or author are missing, perform a keyword search with whatever is available with the ID3 tags
             if ((len(author)==0) and len(ffprobeBook.title) ==0):
+                keywords=optimizeKeys([parent,ffprobeBook.subtitle,ffprobeBook.getAuthors('-')])
                 # Option #1: find book by artist or title (using parent folder)
                 print ("Getting Book by Keyword: {}".format(keywords))
                 books=getAudibleBook(client, keywords=keywords)
@@ -343,7 +344,7 @@ class BookFile:
                 fBook=keywords
             else:
                 #there's at least some metadata available
-                fBook="{},{},{},{},{}".format(ffprobeBook.title,ffprobeBook.subtitle, ffprobeBook.getAuthors("|"), ffprobeBook.getNarrators("|"),ffprobeBook.getSeriesParts())
+                #fBook="{},{},{},{},{}".format(ffprobeBook.title,ffprobeBook.subtitle, ffprobeBook.getAuthors("|"), ffprobeBook.getNarrators("|"),ffprobeBook.getSeriesParts())
 
                 #Use Case : Clean ID3, there's an author, a title, a narrator
                 if (len(ffprobeBook.title) and (len(ffprobeBook.getAuthors()) or len(ffprobeBook.getNarrators()))):
@@ -351,18 +352,20 @@ class BookFile:
                     books=getAudibleBook(client, authors=ffprobeBook.getAuthors(), title=ffprobeBook.title, narrators=ffprobeBook.getNarrators())
                     if books is not None:
                         print ("Found {} books".format(len(books)))
+                        fBook="{},{},{}".format(ffprobeBook.getAuthors(), ffprobeBook.title, ffprobeBook.getNarrators())
                         for book in books:
                             self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
                             #self.audibleMatches.append(self.__getAudibleBook(book))             
 
                 if (len(self.audibleMatches) == 0):
-                    #Use Case: Author, Title, Narrator is too narrow - we're putting these values as keywords
+                    #Use Case: Author, Title, Narrator is too narrow - we're putting these values as keywords with the folder name
                     if (len(ffprobeBook.title) and (len(ffprobeBook.getAuthors()))):
-                        keywords=optimizeKeys([ffprobeBook.title,ffprobeBook.getAuthors()])
-                        print ("Getting Book by Keyword using Author/Title as keywords {}".format(keywords))
+                        keywords=optimizeKeys([parent,ffprobeBook.title,ffprobeBook.getAuthors()])
+                        print ("Getting Book by Keyword using Parent Folder/Author/Title as keywords {}".format(keywords))
                         books=getAudibleBook(client, keywords=keywords)
                         if books is not None:
                             print ("Found {} books".format(len(books)))
+                            fBook="{},{},{}".format(parent,ffprobeBook.title,ffprobeBook.getAuthors())
                             for book in books:
                                 self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
                                 #self.audibleMatches.append(self.__getAudibleBook(book))             
@@ -372,14 +375,17 @@ class BookFile:
                         print ("Performing wider search...")
 
                         # Use Case: ID3 has the author, the parent folder is ONLY the title
-                        print ("Getting Book by Parent Folder Title: {}, {}".format(author, parent))
-                        books=getBookByAuthorTitle(client, author, parent)
+                        print ("Getting Book by Parent Folder Title: {}".format(parent))
+                        #books=getBookByAuthorTitle(client, author, parent)
+                        keywords=optimizeKeys([parent])
+                        books=getAudibleBook(client, keywords=keywords)                        
                         if books is not None:
                             print ("Found {} books".format(len(books)))
+                            fBook=parent
                             for book in books:
                                 self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
                                 #self.audibleMatches.append(self.__getAudibleBook(book))
-
+                        
                         # Use Case:  ID3 has the author, and the album is the title
                         if (len(ffprobeBook.series) > 0):
                             print ("Getting Book by Album Title: {}, {}".format(author, ffprobeBook.series[0].name))
@@ -387,6 +393,7 @@ class BookFile:
                                 books=getBookByAuthorTitle(client, author, ffprobeBook.series[0].name)
                                 if books is not None:
                                     print ("Found {} books".format(len(books)))
+                                    fBook+=",{},{}".format(author, ffprobeBook.series[0].name)
                                     for book in books:
                                         self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
                                         #self.audibleMatches.append(self.__getAudibleBook(book)) 
@@ -405,7 +412,7 @@ class BookFile:
                     bestMatchedBook=None
                     for book in self.audibleMatches.values():
                         #do fuzzymatch with all these combos, get the highest value
-                        aBook="{},{},{},{},{}".format(book.title, book.subtitle, book.getAuthors("|"), book.getNarrators("|"), book.getSeriesParts("|"))
+                        aBook="{},{},{}".format(book.title,book.getAuthors("|"),book.getSeriesParts("|"))
                         matchRatio=fuzzymatch(fBook,aBook)
 
                         #set this books matchRatio
@@ -417,10 +424,10 @@ class BookFile:
                             bestMatchRatio = matchRatio
                             bestMatchedBook = book
 
-                        if (bestMatchRatio > matchRate):
-                            self.isMatched=True
-                            self.audibleMatch=bestMatchedBook
-                            print ("{} Match found: {}".format(bestMatchRatio, bestMatchedBook.title))
+                    if (bestMatchRatio > matchRate):
+                        self.isMatched=True
+                        self.audibleMatch=bestMatchedBook
+                        print ("{} Match found: {}".format(bestMatchRatio, bestMatchedBook.title))
  
     def hardlinkFile(self, source, target):
         #add target to base Media folder
@@ -443,7 +450,7 @@ class BookFile:
     def getTargetPaths(self, book):
         paths=[]
         #Get primary author
-        if (len(book.authors) == 0):
+        if ((book.authors is not None) and (len(book.authors) == 0)):
             author="Unknown"
         else:
             author=book.authors[0].name  
@@ -478,7 +485,7 @@ def createHardLinks(bookFiles:list[BookFile], targetFolder="", dryRun=False):
         else:
             book=f.ffprobeBook
         #if a book belongs to multiple series, hardlink them to tall series
-        for p in f.getTargetPaths(f.audibleMatch):
+        for p in f.getTargetPaths(book):
             if (not dryRun):
                 f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
             print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
@@ -505,14 +512,6 @@ def logBookRecords(logFilePath, bookFiles:list[BookFile]):
                     writer.writeheader()
                     write_headers=False
                 writer.writerow(row)
-
-                #if there was no match, log the Audible Matches found
-                #if (not f.isMatched):
-                    #pprint (f)
-                    # for m in f.audibleMatches.values():
-                    #     row=f.getLogRecord(m)
-                    #     row["isMatched"]="Maybe"
-                    #     writer.writerow(row)
 
         except csv.Error as e:
             print("file {}: {}".format(logFilePath, e))
@@ -543,7 +542,7 @@ def main():
         # bf.ffprobe()
         # do an audible match
         print ("Performing ffprobe and audible match...")
-        bf.matchBook(client,50)
+        bf.matchBook(client,35)
         # if there is match, put it in the to be hardlinked pile
         if bf.isMatched:
             print ("Match found")
@@ -559,8 +558,8 @@ def main():
     auth.deregister_device()
 
     #for files with matches, hardlink them
-    #print ("Creating hard links for matched files...")
-    #createHardLinks(matchedFiles, mediaPath)
+    print ("Creating hard links...")
+    createHardLinks(matchedFiles, mediaPath, True)
 
     #log matched files
     print ("Logging matched books...")
@@ -568,7 +567,7 @@ def main():
 
     #for files with matches, hardlink them
     print ("Creating hard links for matched files...")
-    createHardLinks(unmatchedFiles, mediaPath)
+    createHardLinks(unmatchedFiles, mediaPath, True)
 
     #log unmatched files
     print ("Logging unmatched books...")
@@ -579,5 +578,3 @@ if __name__ == "__main__":
 
     #start the program
     main()
-
-
