@@ -47,7 +47,7 @@ def optimizeKeys(keywords, delim=" "):
     #keywords is a list of stuff, we want to convert it in a comma delimited string
     kw=[]
     for k in keywords:
-        k=k.replace("["," ").replace("]"," ").replace("{"," ").replace("}"," ").replace(".", " ").replace("_", " ").replace("("," ").replace(")"," ").replace(":"," ").replace(","," ")
+        k=k.replace("["," ").replace("]"," ").replace("{"," ").replace("}"," ").replace(".", " ").replace("_", " ").replace("("," ").replace(")"," ").replace(":"," ").replace(","," ").replace(";", " ")
         #parse this item "-"
         for i in k.split("-"):
             #parse again on spaces
@@ -363,7 +363,7 @@ class BookFile:
             if ((len(author)==0) and len(ffprobeBook.title) ==0):
                 keywords=optimizeKeys([parent],",")
                 # Option #1: find book by artist or title (using parent folder)
-                print ("Getting Book by Keyword: {}".format(keywords))
+                print ("No ID3 tags Getting Book by Parent Folder: {}".format(keywords))
                 books=getAudibleBook(client, keywords=keywords)
                 if books is not None:
                     print ("Found {} books".format(len(books)))
@@ -377,22 +377,23 @@ class BookFile:
                 #fBook="{},{},{},{},{}".format(ffprobeBook.title,ffprobeBook.subtitle, ffprobeBook.getAuthors("|"), ffprobeBook.getNarrators("|"),ffprobeBook.getSeriesParts())
 
                 #Use Case : Clean ID3, there's an author, a title, a narrator
-                if (len(ffprobeBook.title) and (len(ffprobeBook.getAuthors()) or len(ffprobeBook.getNarrators()))):
-                    print ("Getting Book by Author: {}, Title: {}, Narrator: {}".format(ffprobeBook.getAuthors(), ffprobeBook.title, ffprobeBook.getNarrators()))
-                    books=getAudibleBook(client, authors=ffprobeBook.getAuthors(), title=ffprobeBook.title, narrators=ffprobeBook.getNarrators())
+                if (len(ffprobeBook.title)):
+                    keywords=optimizeKeys([ffprobeBook.getAuthors(),ffprobeBook.getNarrators()])
+                    print ("Getting Book by Title:{} & Keywords:'{}'".format(ffprobeBook.title, keywords))
+                    books=getAudibleBook(client, title=ffprobeBook.title, keywords=keywords)
                     if books is not None:
                         print ("Found {} books".format(len(books)))
-                        fBook="{},{},{}".format(ffprobeBook.getAuthors(), ffprobeBook.title, ffprobeBook.getNarrators())
+                        fBook="{},{}".format(ffprobeBook.title, keywords)
                         for book in books:
                             self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
                             #self.audibleMatches.append(self.__getAudibleBook(book))             
 
                 if (len(self.audibleMatches) == 0):
                     #Use Case: Author, Title, Narrator is too narrow - we're putting these values as keywords with the folder name
-                    if (len(ffprobeBook.title) and (len(ffprobeBook.getAuthors()))):
-                        keywords=optimizeKeys([parent,ffprobeBook.title,ffprobeBook.getAuthors()])
+                    if (len(ffprobeBook.title)):
+                        keywords=optimizeKeys([parent,ffprobeBook.getAuthors()])
                         print ("Getting Book by Keyword using Parent Folder/Author/Title as keywords {}".format(keywords))
-                        books=getAudibleBook(client, keywords=keywords)
+                        books=getAudibleBook(client, title=ffprobeBook.title, keywords=keywords)
                         if books is not None:
                             print ("Found {} books".format(len(books)))
                             fBook="{},{},{}".format(parent,ffprobeBook.title,ffprobeBook.getAuthors())
@@ -569,52 +570,67 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
     matchedFiles=[]
     unmatchedFiles=[]
 
-    filename=os.path.join(args.log_path, "booktree.json")
-    print(filename)
-    match args.auth:
-        case "browser": 
-            print ("Authenticating via browser...")
-            auth = audible.Authenticator.from_login_external(locale="us")
-        case "file":
-            print ("Authenticating via file...")
-            auth = authenticateByFile(filename)
-        case _:
-            print ("Authenticating via login...")
-            auth = authenticateByLogin(filename, args.user, args.pwd)
-    client = audible.Client(auth)
+    #grab all files and put it in allFiles
+    #if there were no patters provided, grab ALL known audiobooks, currently these are M4B and MP3 files
+    if (len(args.file)==0):
+        for f in ("**/*.m4b","**/*.mp3"):
+            print ("Looking for {} from {}".format(f, path))
+            allFiles.extend(iglob(f, root_dir=args.source_path, recursive=True))
+    else:
+        #find all files that fit the input pattern - escape [] for glob to work
+        pattern = args.file.translate({ord('['):'[[]', ord(']'):'[]]'})
+        #find all files that fit the input pattern
+        print ("Looking for {} from {}".format(pattern, path))
+        allFiles.extend(iglob(pattern, root_dir=path, recursive=True))
 
-    #find all files and attempt to get metadata - escape [] for glob to work
-    pattern = args.file.translate({ord('['):'[[]', ord(']'):'[]]'})
-    print ("Looking for {} from {}".format(pattern,path))
-    for f in iglob(pattern, root_dir=path, recursive=True):
-        fullpath=os.path.join(path, f)
-        print ("Processing {}".format(fullpath))
-        allFiles.append(f)
-        # create a Book File object and add it to the list of files to be processed
-        bf=BookFile(f, fullpath)
-        allFiles.append(bf)
+    #Print how many files were found...
+    print ("Found {} files to process...".format(len(allFiles)))
+    
+    # for f in allFiles:
+    #     fullpath=os.path.join(args.source_path, f)
+    #     print("f:{}, fp:{}\n\n".format(f, fullpath))
 
-        # probe this file
-        # print ("Performing ffprobe...")
-        # bf.ffprobe()
-        # do an audible match
-        print ("Performing ffprobe and audible match...")
-        bf.matchBook(client,args.match)
-        # if there is match, put it in the to be hardlinked pile
-        if bf.isMatched:
-            print ("Match found")
-            pprint(bf.audibleMatch)
-            matchedFiles.append(bf)
-        else:
-            print ("No Match found")
-            pprint(bf.ffprobeBook)
-            unmatchedFiles.append(bf)
-        print("\n", 40 * "-", "\n")
- 
-    # deregister device when done
-    auth.deregister_device()
+    #if files were found, process them all
+    if (len(allFiles)>0):
+        filename=os.path.join(args.log_path, "booktree.json")
+        print(filename)
+        match args.auth:
+            case "browser": 
+                print ("Authenticating via browser...")
+                auth = audible.Authenticator.from_login_external(locale="us")
+            case "file":
+                print ("Authenticating via file...")
+                auth = authenticateByFile(filename)
+            case _:
+                print ("Authenticating via login...")
+                auth = authenticateByLogin(filename, args.user, args.pwd)
+        client = audible.Client(auth)
 
-    if (len(allFiles)) > 0:
+        for f in allFiles:
+            fullpath=os.path.join(args.source_path, f)
+            print ("Processing {}".format(fullpath))
+            # create a Book File object and add it to the list of files to be processed
+            bf=BookFile(f, fullpath)
+            
+            # probe this file
+            # print ("Performing ffprobe...")
+            # bf.ffprobe()
+            # do an audible match
+            print ("Performing ffprobe and audible match...")
+            bf.matchBook(client,args.match)
+            # if there is match, put it in the to be hardlinked pile
+            if bf.isMatched:
+                print ("Match found")
+                pprint(bf.audibleMatch)
+                matchedFiles.append(bf)
+            else:
+                print ("No Match found")
+                pprint(bf.ffprobeBook)
+                unmatchedFiles.append(bf)
+            print("\n", 40 * "-", "\n")
+        # deregister device when done
+        auth.deregister_device()
+
         #for files with matches, hardlink them
         print ("Creating hard links for matched files...")
         createHardLinks(matchedFiles, mediaPath, False)
@@ -634,6 +650,7 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
         #Completed
         print("Completed processing {} files. {}/{} match/unmatch ratio.".format(len(allFiles), len(matchedFiles), len(unmatchedFiles)))  
     else:
+        #Pattern yielded no files
         print ("No files found to process")
 
 def standardizeAuthors(mediaPath, dryRun=False):
@@ -671,13 +688,13 @@ if __name__ == "__main__":
     appDescription = """Reorganize your audiobooks using ID3 or Audbile metadata.\nThe originals are untouched and will be hardlinked to their destination"""
     parser = argparse.ArgumentParser(prog="booktree", description=appDescription)
     #you want a specific file or pattern
-    parser.add_argument("--file", default="**/*.m4b", help="The file or files(s) you want to process.  Accepts * and ?. Defaults to *.m4b")
+    parser.add_argument("--file", default="", help="The file or files(s) you want to process.  Accepts * and ?. Defaults to *.m4b")
     #path to source files, e.g. /data/torrents/downloads
     parser.add_argument("--source_path", default=".", help="Where your unorganized files are")
     #path to media files, e.g. /data/media/abs
     parser.add_argument("--media_path", help="Where your organized files will be, i.e. your Audiobookshelf library", required=True)
     #path to log files, e.g. /data/media/abs
-    parser.add_argument("--log_path", default=".", help="Where your log files will be")
+    parser.add_argument("--log_path", default="", help="Where your log files will be")
     #dry-run
     parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
     #medata source (audible|id3|log)
@@ -691,11 +708,13 @@ if __name__ == "__main__":
 
     #get all arguments
     args = parser.parse_args()
-    pprint(args)
+    if (len(args.log_path)==0):
+        args.log_path=os.path.join(os.getcwd(),"logs")
+    #pprint(args)
 
     #start the program
     main()
-
+ 
 
     
 
