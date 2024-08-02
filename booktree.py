@@ -640,8 +640,8 @@ if __name__ == "__main__":
     #medata source (audible|id3|log)
     parser.add_argument("metadata", choices=["audible","log"], default="audible", help="Source of the metada: (audible, log)")
     #if medata source=audible, you need to provide your username and password
-    parser.add_argument("-user", help="Your audible username")
-    parser.add_argument("-pwd", help="Your audible password")
+    parser.add_argument("-user", help="Your audible username", required=True)
+    parser.add_argument("-pwd", help="Your audible password", required=True)
     parser.add_argument("-match", type=int, default=35, help="The min acceptable ratio for the fuzzymatching algorithm. Defaults to 35")
     parser.add_argument("-log", help="The file path/name to be used as metadata input")
 
