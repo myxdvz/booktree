@@ -628,7 +628,7 @@ def main():
 if __name__ == "__main__":
     
     appDescription = """Reorganize your audiobooks using ID3 or Audbile metadata.\nThe originals are untouched and will be hardlinked to their destination"""
-    parser = argparse.ArgumentParser(prog="bookTree", description=appDescription)
+    parser = argparse.ArgumentParser(prog="booktree", description=appDescription)
     #path to source files, e.g. /data/torrents/downloads
     parser.add_argument("--source_path", help="Where your unorganized files are", required=True)
     #path to media files, e.g. /data/media/abs
