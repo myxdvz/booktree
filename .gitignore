@@ -3,4 +3,5 @@ run-booktree.sh
 *.json
 private.txt
 logs/*
-.DS_Store
+.DS_Store 
+.gitignore
