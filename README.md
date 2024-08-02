@@ -27,7 +27,7 @@ usage: python booktree.py [-h] {audible|log} -user USER -pwd PWD --source_path S
 |  --file FILE            |The file or files(s) you want to process.  Accepts * and ?|\*.m4b|
 |  --source_path SOURCE_PATH|Where your unorganized files are|Required|
 |  --media_path MEDIA_PATH|Where your organized files will be, i.e. your Audiobookshelf library|Required|
-|  --log_path LOG_PATH   |Where your log files will be|Current directory|
+|  --log_path LOG_PATH   |Where your log files will be|<booktree>/logs|
 |  -match MATCH          |The min acceptable ratio for the fuzzymatching algorithm| 35|
 |  --dry-run             |If provided, will only create logfile and not actually build the tree||
 
