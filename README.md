@@ -51,12 +51,12 @@ $ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "
 $ python booktree.py audible --file "**/01 The Lies of Locke Lamora/*.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "/downloads" --media_path /data/media/abs [--log-path /logs] [--dryn-run]
 ~~~
 
-#### Use Case #3a: One Book in a file (that is under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" somewhere under /downloads to "/data/media/abs"
+#### Use Case #3a: One Book in a file ==(that is under a book folder)== - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" somewhere under /downloads to "/data/media/abs"
 ~~~
 $ python booktree.py audible --file "**/KATE.DANIELS.04.Magic Bleeds.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /downloads --media_path /data/media/abs [--dry-run]
 ~~~
 
-#### Use Case #3b: One Book in a file (that is NOT under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" /downloads/Matchup to "/data/media/abs"
+#### Use Case #3b: One Book in a file ==(that is NOT under a book folder)== - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" /downloads/Matchup to "/data/media/abs" For this use case, it is ==IMPORTANT== that the --source_path be the parent folder of the file
 ~~~
 $ python booktree.py audible --file "MatchUp.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /downloads/MatchUp --media_path /data/media/abs [--dry-run]
 ~~~
