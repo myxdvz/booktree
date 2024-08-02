@@ -646,7 +646,6 @@ if __name__ == "__main__":
     parser.add_argument("-log", help="The file path/name to be used as metadata input")
 
     #get all arguments
-    #args = parser.parse_args("audible -user delunamarie@gmail.com -pwd "##Abc123@m@z0n" --source_path /data/torrents/complete/audiobooks --media_path /data/media/audiobooks/mam".split())
     args = parser.parse_args()
     #pprint(args)
 
