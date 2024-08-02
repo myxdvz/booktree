@@ -1,7 +1,0 @@
-run-booktree.sh
-*.csv
-*.json
-private.txt
-logs/*
-.DS_Store 
-.gitignore
