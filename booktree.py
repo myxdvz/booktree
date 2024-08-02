@@ -55,7 +55,7 @@ def optimizeKeys(keywords, delim=" "):
                 #if it's numeric like 02, make it an actual digit
                 if (not j.isdigit()):
                     #remove any articles like a, i, the
-                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series"])):
+                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks"])):
                         kw.append(j.lower())
 
     #now return comma delimited string
@@ -569,7 +569,8 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
     matchedFiles=[]
     unmatchedFiles=[]
 
-    filename="booktree.json"
+    filename=os.path.join(args.log_path, "booktree.json")
+    print(filename)
     match args.auth:
         case "browser": 
             print ("Authenticating via browser...")
@@ -584,8 +585,8 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
 
     #find all files and attempt to get metadata - escape [] for glob to work
     pattern = args.file.translate({ord('['):'[[]', ord(']'):'[]]'})
-    print ("Recursive: {} Looking for {} from {}".format(args.recursive,pattern,path))
-    for f in iglob(pattern, root_dir=path, recursive=args.recursive):
+    print ("Looking for {} from {}".format(pattern,path))
+    for f in iglob(pattern, root_dir=path, recursive=True):
         fullpath=os.path.join(path, f)
         print ("Processing {}".format(fullpath))
         allFiles.append(f)
@@ -669,12 +670,10 @@ if __name__ == "__main__":
     
     appDescription = """Reorganize your audiobooks using ID3 or Audbile metadata.\nThe originals are untouched and will be hardlinked to their destination"""
     parser = argparse.ArgumentParser(prog="booktree", description=appDescription)
-    #path to source files, e.g. /data/torrents/downloads
-    parser.add_argument("--source_path", help="Where your unorganized files are", required=True)
     #you want a specific file or pattern
-    parser.add_argument("--file", default="*.m4b", help="If you want to process a specific file. By default its all M4Bs")
-    #recursive
-    parser.add_argument("-r", "--recursive", action="store_true", help="Performs a recursive search")
+    parser.add_argument("--file", default="**/*.m4b", help="The file or files(s) you want to process.  Accepts * and ?. Defaults to *.m4b")
+    #path to source files, e.g. /data/torrents/downloads
+    parser.add_argument("--source_path", default=".", help="Where your unorganized files are")
     #path to media files, e.g. /data/media/abs
     parser.add_argument("--media_path", help="Where your organized files will be, i.e. your Audiobookshelf library", required=True)
     #path to log files, e.g. /data/media/abs
