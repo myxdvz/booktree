@@ -11,8 +11,22 @@ import posixpath
 import csv
 from datetime import datetime
 from thefuzz import fuzz
+from glob import iglob
+import argparse
 
 #Utilities
+def cleanseAuthor(author):
+    #remove some characters we don't want on the author name
+    stdAuthor=author
+
+    #remove some characters we don't want on the author name
+    for c in ["- editor", " - ", "'"]:
+        stdAuthor=stdAuthor.replace(c,"")
+
+    #replace . with space, and then make sure that there's only single space between words)
+    stdAuthor=" ".join(stdAuthor.replace("."," ").split())
+    return stdAuthor
+
 def getList(items, field="name", delimiter=","):
     return delimiter.join([str(item.name) for item in items])
 
@@ -45,7 +59,10 @@ def optimizeKeys(keywords):
                     kw.append(j)
 
     #now return comma delimited string
-    return ' '.join(map(str, kw)) 
+    return ' '.join(map(str,kw))
+
+def getParentFolder(file):
+    return (os.path.dirname(file).split("/")[-1])
 
 #MyAudible Functions
 def authenticateByFile(authFilename):
@@ -153,11 +170,11 @@ class Contributor:
 #Series Class
 @dataclass
 class Series:
-    name:str
-    part:int=0
+    name:str=""
+    part:str=""
     
     def getSeriesPart(self):
-        if (str(self.part) != "0"):
+        if (len(self.part.strip()) > 0):
             return "{} #{}".format(self.name, str(self.part))
         else:
             return self.name
@@ -231,9 +248,6 @@ class BookFile:
     ffprobeBook:Book=None
     audibleMatches:dict=field(default_factory=dict)
 
-    def getParentFolder(self):
-        return (os.path.dirname(self.sourcePath).split("/")[-1])
-
     def __probe_file(self):
         #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
         cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', self.sourcePath]
@@ -255,7 +269,7 @@ class BookFile:
         if (('SERIES' in metadata) and ('PART' in metadata)): 
             book.series.append(Series(metadata["SERIES"],metadata["PART"]))
         #parse album, assume it's a series
-        if 'album' in metadata: book.series.append(Series(metadata["album"],0))
+        if 'album' in metadata: book.series.append(Series(metadata["album"],""))
         #parse authors
         if 'artist' in metadata: 
             for author in metadata["artist"].split(","):
@@ -296,7 +310,7 @@ class BookFile:
         
     def matchBook(self, client, matchRate=75):
         #given book file, ffprobe and audiblematches, return the best match
-        parent = self.getParentFolder().replace(" (Unabridged)", "")
+        parent = getParentFolder(self.sourcePath).replace(" (Unabridged)", "")
 
         #first, read the ID tags
         ffprobeBook=self.ffprobe()
@@ -455,12 +469,15 @@ class BookFile:
         else:
             author=book.authors[0].name  
 
+        #standardize author name (replace . with space, and then make sure that there's only single space)
+        stdAuthor=cleanseAuthor(author)
+
         #Does this book belong in a series?
         if (len(book.series) > 0):
             for s in book.series:
-                paths.append("{}/{}/{} #{} - {}/".format(author, s.name, s.name, s.part, book.title))
+                paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, s.getSeriesPart(), book.title))
         else:
-            paths.append("{}/{}/".format(author, book.title))   
+            paths.append("{}/{}/".format(stdAuthor, book.title))   
         return paths  
     
     def getLogRecord(self, bookMatch:Book):
@@ -516,18 +533,21 @@ def logBookRecords(logFilePath, bookFiles:list[BookFile]):
         except csv.Error as e:
             print("file {}: {}".format(logFilePath, e))
 
-def main():
-    path="/data/torrents/complete/seeding/abs"
-    mediaPath="/data/media/audiobooks/mam"
-    logfile="/config/code/myxrename/booktree_log_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S"))
-    
+def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
+    #read from the logfile - generate book files from there
+
+    #for each row, create hardlinks
+    return    
+
+def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
+    allFiles=[]
     matchedFiles=[]
     unmatchedFiles=[]
 
     print ("Authenticating...\r\n")
-    filename="/config/code/myxrename/maried.json"
+    filename="bookTree.json"
     #auth = authenticateByFile(filename)
-    auth = authenticateByLogin(filename, "delunamarie@gmail.com", "##Abc123@m@z0n")
+    auth = authenticateByLogin(filename, args.user, args.pwd)
     #auth = audible.Authenticator.from_login_external(locale="us")
     client = audible.Client(auth)
 
@@ -537,12 +557,14 @@ def main():
         print ("Processing {}".format(fullpath))
         # create a Book File object and add it to the list of files to be processed
         bf=BookFile(f, fullpath)
+        allFiles.append(bf)
+
         # probe this file
         # print ("Performing ffprobe...")
         # bf.ffprobe()
         # do an audible match
         print ("Performing ffprobe and audible match...")
-        bf.matchBook(client,35)
+        bf.matchBook(client,args.match)
         # if there is match, put it in the to be hardlinked pile
         if bf.isMatched:
             print ("Match found")
@@ -559,7 +581,7 @@ def main():
 
     #for files with matches, hardlink them
     print ("Creating hard links...")
-    createHardLinks(matchedFiles, mediaPath, True)
+    createHardLinks(matchedFiles, mediaPath, False)
 
     #log matched files
     print ("Logging matched books...")
@@ -567,14 +589,66 @@ def main():
 
     #for files with matches, hardlink them
     print ("Creating hard links for matched files...")
-    createHardLinks(unmatchedFiles, mediaPath, True)
+    createHardLinks(unmatchedFiles, mediaPath, False)
 
     #log unmatched files
     print ("Logging unmatched books...")
-    logBookRecords(logfile, unmatchedFiles)
+    logBookRecords(logfile, unmatchedFiles)    
 
+def standardizeAuthors(mediaPath, dryRun=False):
+    #get all authors from the source path
+    for f in iglob(os.path.join(mediaPath,"*"), recursive=False):
+        #ignore @eaDir
+        if (f != os.path.join(mediaPath,"@eaDir")):
+            oldAuthor=os.path.basename(f)
+            newAuthor=cleanseAuthor(oldAuthor)
+            if (oldAuthor != newAuthor):
+                print("Renaming: {} >> {}".format(f, os.path.join(os.path.dirname(f), newAuthor)))
+                if (not dryRun):
+                    try:
+                        Path(f).rename(os.path.join(os.path.dirname(f), newAuthor))
+                    except Exception as e:
+                        print ("Can't rename {}: {}".format(f, e))
+
+def main():
+
+    #validate that source_path and media_path exists
+    path=args.source_path
+    mediaPath=args.media_path
+    logfile=os.path.join(os.path.dirname(args.log_path),"booktree_log_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")))
+    if (os.path.exists(path) and os.path.exists(mediaPath)):
+        if (args.metadata == "audible"):
+            print ("Building tree structure using Audible metadata:\nSource:{}\nMedia:{}\nLog:{}".format(path,mediaPath,logfile))
+            buildTreeFromData(path, mediaPath, logfile, args.dry_run)
+        else:
+            print ("This feature is coming soon! Right now, only audible is supported")
+    else:
+        print("Your source and media paths are invalid. Please check and try again!\nSource:{}\nMedia:{}".format(path,mediaPath))
 
 if __name__ == "__main__":
+    
+    appDescription = """Reorganize your audiobooks using ID3 or Audbile metadata.\nThe originals are untouched and will be hardlinked to their destination"""
+    parser = argparse.ArgumentParser(prog="bookTree", description=appDescription)
+    #path to source files, e.g. /data/torrents/downloads
+    parser.add_argument("--source_path", help="Where your unorganized files are", required=True)
+    #path to media files, e.g. /data/media/abs
+    parser.add_argument("--media_path", help="Where your organized files will be, i.e. your Audiobookshelf library", required=True)
+    #path to log files, e.g. /data/media/abs
+    parser.add_argument("--log_path", default=".", help="Where your log files will be")
+    #dry-run
+    parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
+    #medata source (audible|id3|log)
+    parser.add_argument("metadata", choices=["audible","log"], default="audible", help="Source of the metada: (audible, log)")
+    #if medata source=audible, you need to provide your username and password
+    parser.add_argument("-user", help="Your audible username")
+    parser.add_argument("-pwd", help="Your audible password")
+    parser.add_argument("-match", type=int, default=35, help="The min acceptable ratio for the fuzzymatching algorithm. Defaults to 35")
+    parser.add_argument("-log", help="The file path/name to be used as metadata input")
+
+    #get all arguments
+    #args = parser.parse_args("audible -user delunamarie@gmail.com -pwd "##Abc123@m@z0n" --source_path /data/torrents/complete/audiobooks --media_path /data/media/audiobooks/mam".split())
+    args = parser.parse_args()
+    #pprint(args)
 
     #start the program
     main()
