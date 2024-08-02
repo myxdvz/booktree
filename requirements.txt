@@ -1,0 +1,2 @@
+audible==0.8.2
+thefuzz==0.22.1
