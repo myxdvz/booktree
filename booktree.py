@@ -261,31 +261,40 @@ class BookFile:
         return json.loads(out)
     
     def ffprobe(self):
-        #ffprobe the file
-        metadata=self.__probe_file()["format"]["tags"]
-        #parse and create a book object
-        # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
-        #{'format': {'tags': {'title': 'MatchUp', 'artist': 'Lee Child - editor, Val McDermid, Charlaine Harris, John Sandford, Kathy Reichs', 'composer': 'Laura Benanti, Dennis Boutsikaris, Gerard Doyle, Linda Emond, January LaVoy, Robert Petkoff, Lee Child', 'album': 'MatchUp'}}}
+        metadata=""
+        try:
+            #ffprobe the file
+            metadata=self.__probe_file()["format"]["tags"]
+            #check if there are any metadata at all
+        except Exception as e:
+            #no metadata received
+            print("ffprobe failed: {}".format(e))
+
         book=Book()
-        if 'AUDIBLE_ASIN' in metadata: book.asin=metadata["AUDIBLE_ASIN"]
-        if 'title' in metadata: book.title=metadata["title"]
-        if 'subtitle' in metadata: book.subtitle=metadata["subtitle"]
-        #series and part, if provided
-        if (('SERIES' in metadata) and ('PART' in metadata)): 
-            book.series.append(Series(metadata["SERIES"],metadata["PART"]))
-        #parse album, assume it's a series
-        if 'album' in metadata: book.series.append(Series(metadata["album"],""))
-        #parse authors
-        if 'artist' in metadata: 
-            for author in metadata["artist"].split(","):
-                book.authors.append(Contributor(author))
-        #parse narrators
-        if 'composer' in metadata: 
-            for narrator in metadata["composer"].split(","):
-                book.narrators.append(Contributor(narrator))
-        #return a book object created from  ffprobe
-        self.ffprobeBook=book
-        pprint (book)
+        if (len(metadata) > 0):
+            #there are some metadata
+            #parse and create a book object
+            # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
+            #{'format': {'tags': {'title': 'MatchUp', 'artist': 'Lee Child - editor, Val McDermid, Charlaine Harris, John Sandford, Kathy Reichs', 'composer': 'Laura Benanti, Dennis Boutsikaris, Gerard Doyle, Linda Emond, January LaVoy, Robert Petkoff, Lee Child', 'album': 'MatchUp'}}}
+            if 'AUDIBLE_ASIN' in metadata: book.asin=metadata["AUDIBLE_ASIN"]
+            if 'title' in metadata: book.title=metadata["title"]
+            if 'subtitle' in metadata: book.subtitle=metadata["subtitle"]
+            #series and part, if provided
+            if (('SERIES' in metadata) and ('PART' in metadata)): 
+                book.series.append(Series(metadata["SERIES"],metadata["PART"]))
+            #parse album, assume it's a series
+            if 'album' in metadata: book.series.append(Series(metadata["album"],""))
+            #parse authors
+            if 'artist' in metadata: 
+                for author in metadata["artist"].split(","):
+                    book.authors.append(Contributor(author))
+            #parse narrators
+            if 'composer' in metadata: 
+                for narrator in metadata["composer"].split(","):
+                    book.narrators.append(Contributor(narrator))
+            #return a book object created from  ffprobe
+            self.ffprobeBook=book
+            pprint (book)
         return book
     
     def __getAudibleBook(self, product):
