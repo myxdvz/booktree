@@ -36,19 +36,19 @@ Note that using the log as the metadata source is still under development.  The 
 
 ## Examples and Use Cases
 
-#### Use Case #1: Minimum usage required - Process all m4b files under current folder to /data/media/abs. Logs will be created on the current folder
+#### Use Case #1: Minimum usage required - Process all m4b files under current folder to /data/media/abs.
 ~~~
 $ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --media_path /data/media/abs [--dryn-run]
 ~~~
 
-#### Use Case #2a: One Book in a folder - Process all m4b files from /downloads/01 The Lies of Locke Lamora to /data/media/abs. Logs will be created on /logs folder
+#### Use Case #2a: One Book in a folder - Process all m4b files from /downloads/01 The Lies of Locke Lamora to /data/media/abs.
 ~~~
-$ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "/downloads/01 The Lies of Locke Lamora" --media_path /data/media/abs [--log-path /logs] [--dryn-run]
+$ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "/downloads/01 The Lies of Locke Lamora" --media_path /data/media/abs [--dryn-run]
 ~~~
 
-#### Use Case #2b: One Book in a folder - Process all m4b files from a folder 01 The Lies of Locke Lamora somewhere under /downloads to /data/media/abs. Logs will be created on /logs folder
+#### Use Case #2b: One Book in a folder - Process all m4b files from a folder 01 The Lies of Locke Lamora somewhere under /downloads to /data/media/abs.
 ~~~
-$ python booktree.py audible --file "**/01 The Lies of Locke Lamora/*.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "/downloads" --media_path /data/media/abs [--log-path /logs] [--dryn-run]
+$ python booktree.py audible --file "**/01 The Lies of Locke Lamora/*.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "/downloads" --media_path /data/media/abs [--dryn-run]
 ~~~
 
 #### Use Case #3a: One Book in a file (that is under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" somewhere under /downloads to "/data/media/abs"
@@ -63,7 +63,7 @@ $ python booktree.py audible --file "MatchUp.m4b" -user AUDIBLE-USER -pwd AUDIBL
 
 #### Use Case #4: All audiobooks under a folder - Recursively process all m4b files from /downloads to /data/media/abs.
 ~~~
-$ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /downloads --media_path /data/media/abs [--log-path /logs] [--dryn-run]
+$ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /downloads --media_path /data/media/abs [--dryn-run]
 ~~~
 
 ## FAQ
