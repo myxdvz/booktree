@@ -13,11 +13,12 @@ from datetime import datetime
 from thefuzz import fuzz
 from glob import iglob
 import argparse
+import unicodedata
 
 #Utilities
 def cleanseAuthor(author):
     #remove some characters we don't want on the author name
-    stdAuthor=author
+    stdAuthor=strip_accents(author)
 
     #remove some characters we don't want on the author name
     for c in ["- editor", " - ", "'"]:
@@ -28,7 +29,7 @@ def cleanseAuthor(author):
     return stdAuthor
 
 def getList(items, field="name", delimiter=","):
-    return delimiter.join([str(item.name) for item in items])
+    return delimiter.join([str(strip_accents(item.name)) for item in items])
 
 def fuzzymatch(x:str, y:str):
     #remove .:_-, for fuzzymatch
@@ -64,6 +65,10 @@ def optimizeKeys(keywords):
 def getParentFolder(file):
     return (os.path.dirname(file).split("/")[-1])
 
+def strip_accents(s):
+    return ''.join(c for c in unicodedata.normalize('NFD', s)
+                    if unicodedata.category(c) != 'Mn')
+
 #MyAudible Functions
 def authenticateByFile(authFilename):
     auth = audible.Authenticator.from_file(authFilename)
@@ -97,8 +102,8 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
             params={
                 "asin": asin,
                 "title": title.replace(" (Unabridged)",""),
-                "author": authors,
-                "narrator": narrators,
+                "author": strip_accents(authors),
+                "narrator": strip_accents(narrators),
                 "keywords": keywords,
                 "response_groups": (
                     "sku, series, product_attrs, relationships, contributors,"
@@ -139,7 +144,7 @@ def getBookByAuthorTitle(client, author, title):
         books = client.get (
             path=f"catalog/products",
             params={
-                "author": author,
+                "author": strip_accents(author),
                 "title": title,
                 "response_groups": (
                     "sku, series, product_attrs, relationships, contributors,"
@@ -615,7 +620,7 @@ def main():
     #validate that source_path and media_path exists
     path=args.source_path
     mediaPath=args.media_path
-    logfile=os.path.join(os.path.dirname(args.log_path),"booktree_log_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")))
+    logfile=os.path.join(os.path.abspath(args.log_path),"booktree_log_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")))
     if (os.path.exists(path) and os.path.exists(mediaPath)):
         if (args.metadata == "audible"):
             print ("Building tree structure using Audible metadata:\nSource:{}\nMedia:{}\nLog:{}".format(path,mediaPath,logfile))
@@ -647,7 +652,6 @@ if __name__ == "__main__":
 
     #get all arguments
     args = parser.parse_args()
-    #pprint(args)
 
     #start the program
     main()
