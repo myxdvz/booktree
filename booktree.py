@@ -11,7 +11,7 @@ import posixpath
 import csv
 from datetime import datetime
 from thefuzz import fuzz
-from glob import iglob
+from glob import iglob, glob
 import argparse
 import unicodedata
 
@@ -43,27 +43,33 @@ def fuzzymatch(x:str, y:str):
     else:
         return 0
     
-def optimizeKeys(keywords):
+def optimizeKeys(keywords, delim=" "):
     #keywords is a list of stuff, we want to convert it in a comma delimited string
     kw=[]
     for k in keywords:
-        print (k)
-        k=k.replace("[","").replace("]","").replace("{","").replace("}","")
+        k=k.replace("["," ").replace("]"," ").replace("{"," ").replace("}"," ").replace(".", " ").replace("_", " ").replace("("," ").replace(")"," ").replace(":"," ").replace(","," ")
         #parse this item "-"
         for i in k.split("-"):
             #parse again on spaces
             for j in i.split():
                 #if it's numeric like 02, make it an actual digit
-                if (j.isdigit()):
-                    kw.append(int(j))
-                else:
-                    kw.append(j)
+                if (not j.isdigit()):
+                    #remove any articles like a, i, the
+                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series"])):
+                        kw.append(j.lower())
 
     #now return comma delimited string
-    return ' '.join(map(str,kw))
+    return delim.join(map(str,kw))
 
 def getParentFolder(file):
-    return (os.path.dirname(file).split("/")[-1])
+    #We normally assume that the file is in a folder, but some files are NOT in a subfolder
+    parent=os.path.dirname(file)
+    #check if the parent folder matches the source folder
+    if (parent == args.source_path):
+        #this file is bad and has no parent folder, use the filename as the parent folder
+        return os.path.basename(file)
+    else:
+        return (parent.split("/")[-1])
 
 def strip_accents(s):
     return ''.join(c for c in unicodedata.normalize('NFD', s)
@@ -261,40 +267,36 @@ class BookFile:
         return json.loads(out)
     
     def ffprobe(self):
-        metadata=""
+        #ffprobe the file
         try:
-            #ffprobe the file
             metadata=self.__probe_file()["format"]["tags"]
-            #check if there are any metadata at all
         except Exception as e:
-            #no metadata received
-            print("ffprobe failed: {}".format(e))
+            metadata=dict()
+            print ("ffprobe failed: {}".format(e))
 
+        #parse and create a book object
+        # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
+        #{'format': {'tags': {'title': 'MatchUp', 'artist': 'Lee Child - editor, Val McDermid, Charlaine Harris, John Sandford, Kathy Reichs', 'composer': 'Laura Benanti, Dennis Boutsikaris, Gerard Doyle, Linda Emond, January LaVoy, Robert Petkoff, Lee Child', 'album': 'MatchUp'}}}
         book=Book()
-        if (len(metadata) > 0):
-            #there are some metadata
-            #parse and create a book object
-            # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
-            #{'format': {'tags': {'title': 'MatchUp', 'artist': 'Lee Child - editor, Val McDermid, Charlaine Harris, John Sandford, Kathy Reichs', 'composer': 'Laura Benanti, Dennis Boutsikaris, Gerard Doyle, Linda Emond, January LaVoy, Robert Petkoff, Lee Child', 'album': 'MatchUp'}}}
-            if 'AUDIBLE_ASIN' in metadata: book.asin=metadata["AUDIBLE_ASIN"]
-            if 'title' in metadata: book.title=metadata["title"]
-            if 'subtitle' in metadata: book.subtitle=metadata["subtitle"]
-            #series and part, if provided
-            if (('SERIES' in metadata) and ('PART' in metadata)): 
-                book.series.append(Series(metadata["SERIES"],metadata["PART"]))
-            #parse album, assume it's a series
-            if 'album' in metadata: book.series.append(Series(metadata["album"],""))
-            #parse authors
-            if 'artist' in metadata: 
-                for author in metadata["artist"].split(","):
-                    book.authors.append(Contributor(author))
-            #parse narrators
-            if 'composer' in metadata: 
-                for narrator in metadata["composer"].split(","):
-                    book.narrators.append(Contributor(narrator))
-            #return a book object created from  ffprobe
-            self.ffprobeBook=book
-            pprint (book)
+        if 'AUDIBLE_ASIN' in metadata: book.asin=metadata["AUDIBLE_ASIN"]
+        if 'title' in metadata: book.title=metadata["title"]
+        if 'subtitle' in metadata: book.subtitle=metadata["subtitle"]
+        #series and part, if provided
+        if (('SERIES' in metadata) and ('PART' in metadata)): 
+            book.series.append(Series(metadata["SERIES"],metadata["PART"]))
+        #parse album, assume it's a series
+        if 'album' in metadata: book.series.append(Series(metadata["album"],""))
+        #parse authors
+        if 'artist' in metadata: 
+            for author in metadata["artist"].split(","):
+                book.authors.append(Contributor(author))
+        #parse narrators
+        if 'composer' in metadata: 
+            for narrator in metadata["composer"].split(","):
+                book.narrators.append(Contributor(narrator))
+        #return a book object created from  ffprobe
+        self.ffprobeBook=book
+        pprint (book)
         return book
     
     def __getAudibleBook(self, product):
@@ -359,7 +361,7 @@ class BookFile:
 
             #Use Case:  If title or author are missing, perform a keyword search with whatever is available with the ID3 tags
             if ((len(author)==0) and len(ffprobeBook.title) ==0):
-                keywords=optimizeKeys([parent,ffprobeBook.subtitle,ffprobeBook.getAuthors('-')])
+                keywords=optimizeKeys([parent],",")
                 # Option #1: find book by artist or title (using parent folder)
                 print ("Getting Book by Keyword: {}".format(keywords))
                 books=getAudibleBook(client, keywords=keywords)
@@ -470,28 +472,34 @@ class BookFile:
         #check if the file already exists in the target directory
         filename=os.path.join(destination, os.path.basename(source).split('/')[-1])
         if (not os.path.exists(filename)):
-            print ("Hardlinking {} to {}", source, filename)
-            os.link(source, filename)
-            self.isHardlinked=True
+            print ("Hardlinking {} to {}".format(source, filename))
+            try:
+                os.link(source, filename)
+                self.isHardlinked=True
+            except Exception as e:
+                print ("Failed to hardlink {} to {} due to:".format(source, filename, e))
+
         return self.isHardlinked
     
     def getTargetPaths(self, book):
         paths=[]
-        #Get primary author
-        if ((book.authors is not None) and (len(book.authors) == 0)):
-            author="Unknown"
-        else:
-            author=book.authors[0].name  
+        if (book is not None):
+            #Get primary author
+            if ((book.authors is not None) and (len(book.authors) == 0)):
+                author="Unknown"
+            else:
+                author=book.authors[0].name  
 
-        #standardize author name (replace . with space, and then make sure that there's only single space)
-        stdAuthor=cleanseAuthor(author)
+            #standardize author name (replace . with space, and then make sure that there's only single space)
+            stdAuthor=cleanseAuthor(author)
 
-        #Does this book belong in a series?
-        if (len(book.series) > 0):
-            for s in book.series:
-                paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, s.getSeriesPart(), book.title))
-        else:
-            paths.append("{}/{}/".format(stdAuthor, book.title))   
+            #Does this book belong in a series?
+            if (len(book.series) > 0):
+                for s in book.series:
+                    paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, s.getSeriesPart(), book.title))
+            else:
+                paths.append("{}/{}/".format(stdAuthor, book.title))   
+
         return paths  
     
     def getLogRecord(self, bookMatch:Book):
@@ -515,12 +523,15 @@ def createHardLinks(bookFiles:list[BookFile], targetFolder="", dryRun=False):
             book=f.audibleMatch
         else:
             book=f.ffprobeBook
-        #if a book belongs to multiple series, hardlink them to tall series
-        for p in f.getTargetPaths(book):
-            if (not dryRun):
-                f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
-            print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
-        print("\n", 40 * "-", "\n")
+
+        #if there is a book
+        if (book is not None):
+            #if a book belongs to multiple series, hardlink them to tall series
+            for p in f.getTargetPaths(book):
+                if (not dryRun):
+                    f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
+                print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
+            print("\n", 40 * "-", "\n")
 
 def logBookRecords(logFilePath, bookFiles:list[BookFile]):
 
@@ -558,17 +569,26 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
     matchedFiles=[]
     unmatchedFiles=[]
 
-    print ("Authenticating...\r\n")
     filename="booktree.json"
-    #auth = authenticateByFile(filename)
-    auth = authenticateByLogin(filename, args.user, args.pwd)
-    #auth = audible.Authenticator.from_login_external(locale="us")
+    match args.auth:
+        case "browser": 
+            print ("Authenticating via browser...")
+            auth = audible.Authenticator.from_login_external(locale="us")
+        case "file":
+            print ("Authenticating via file...")
+            auth = authenticateByFile(filename)
+        case _:
+            print ("Authenticating via login...")
+            auth = authenticateByLogin(filename, args.user, args.pwd)
     client = audible.Client(auth)
 
-    #find all m4b files and attempt to get metadata
-    for f in Path(path).rglob('*.m4b'):
-        fullpath=f.absolute()
+    #find all files and attempt to get metadata - escape [] for glob to work
+    pattern = args.file.translate({ord('['):'[[]', ord(']'):'[]]'})
+    print ("Recursive: {} Looking for {} from {}".format(args.recursive,pattern,path))
+    for f in iglob(pattern, root_dir=path, recursive=args.recursive):
+        fullpath=os.path.join(path, f)
         print ("Processing {}".format(fullpath))
+        allFiles.append(f)
         # create a Book File object and add it to the list of files to be processed
         bf=BookFile(f, fullpath)
         allFiles.append(bf)
@@ -593,21 +613,27 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
     # deregister device when done
     auth.deregister_device()
 
-    #for files with matches, hardlink them
-    print ("Creating hard links...")
-    createHardLinks(matchedFiles, mediaPath, False)
+    if (len(allFiles)) > 0:
+        #for files with matches, hardlink them
+        print ("Creating hard links for matched files...")
+        createHardLinks(matchedFiles, mediaPath, False)
 
-    #log matched files
-    print ("Logging matched books...")
-    logBookRecords(logfile, matchedFiles)
+        #log matched files
+        print ("Logging matched books...")
+        logBookRecords(logfile, matchedFiles)
 
-    #for files with matches, hardlink them
-    print ("Creating hard links for matched files...")
-    createHardLinks(unmatchedFiles, mediaPath, False)
+        #for files with matches, hardlink them
+        print ("Creating hard links for unmatched files...")
+        createHardLinks(unmatchedFiles, mediaPath, False)
 
-    #log unmatched files
-    print ("Logging unmatched books...")
-    logBookRecords(logfile, unmatchedFiles)    
+        #log unmatched files
+        print ("Logging unmatched books...")
+        logBookRecords(logfile, unmatchedFiles)  
+
+        #Completed
+        print("Completed processing {} files. {}/{} match/unmatch ratio.".format(len(allFiles), len(matchedFiles), len(unmatchedFiles)))  
+    else:
+        print ("No files found to process")
 
 def standardizeAuthors(mediaPath, dryRun=False):
     #get all authors from the source path
@@ -645,6 +671,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="booktree", description=appDescription)
     #path to source files, e.g. /data/torrents/downloads
     parser.add_argument("--source_path", help="Where your unorganized files are", required=True)
+    #you want a specific file or pattern
+    parser.add_argument("--file", default="*.m4b", help="If you want to process a specific file. By default its all M4Bs")
+    #recursive
+    parser.add_argument("-r", "--recursive", action="store_true", help="Performs a recursive search")
     #path to media files, e.g. /data/media/abs
     parser.add_argument("--media_path", help="Where your organized files will be, i.e. your Audiobookshelf library", required=True)
     #path to log files, e.g. /data/media/abs
@@ -654,6 +684,7 @@ if __name__ == "__main__":
     #medata source (audible|id3|log)
     parser.add_argument("metadata", choices=["audible","log"], default="audible", help="Source of the metada: (audible, log)")
     #if medata source=audible, you need to provide your username and password
+    parser.add_argument("-auth", choices=["login","browser","file"], default="login")
     parser.add_argument("-user", help="Your audible username", required=True)
     parser.add_argument("-pwd", help="Your audible password", required=True)
     parser.add_argument("-match", type=int, default=35, help="The min acceptable ratio for the fuzzymatching algorithm. Defaults to 35")
@@ -661,6 +692,7 @@ if __name__ == "__main__":
 
     #get all arguments
     args = parser.parse_args()
+    pprint(args)
 
     #start the program
     main()
