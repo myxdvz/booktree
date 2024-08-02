@@ -177,9 +177,7 @@ def main():
 
 if __name__ == "__main__":
     #start the program
-    #main()
+    main()
 
-    metadata=FFProbe("/data/torrents/complete/audiobooks/MatchUp/MatchUp.m4b")
-    print(metadata)
 
 
