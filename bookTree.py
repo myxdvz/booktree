@@ -545,7 +545,7 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
     unmatchedFiles=[]
 
     print ("Authenticating...\r\n")
-    filename="bookTree.json"
+    filename="booktree.json"
     #auth = authenticateByFile(filename)
     auth = authenticateByLogin(filename, args.user, args.pwd)
     #auth = audible.Authenticator.from_login_external(locale="us")
