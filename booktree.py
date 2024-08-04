@@ -167,10 +167,12 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             bf = book[b].files[0]
 
             #search MAM record
-            book[b].getMAMBooks(myx_args.params.session, bf)
+            if (myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible"):
+                book[b].getMAMBooks(myx_args.params.session, bf)
                 
             #now, Search Audible using either MAM (better) or ffprobe metadata
-            book[b].getAudibleBooks(client)
+            if (myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible"):
+                book[b].getAudibleBooks(client)
 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()
@@ -228,22 +230,25 @@ def main():
 
         #Print how many files were found...
         print (f"Found {len(allFiles)} files to process...\n\n")
+
+        #build tree from identified sources
+        buildTreeFromHybridSources(path, mediaPath, logfile, myx_args.params.dry_run)
         
         # for f in allFiles:
         #     fullpath=os.path.join(myx_args.params.source_path, f)
         #     print("f:{}, fp:{}\n\n".format(f, fullpath))
-        match myx_args.params.metadata:
-            case "mam":
-                buildTreeFromMAM(path, mediaPath, logfile, myx_args.params.dry_run)
+        # match myx_args.params.metadata:
+        #     case "mam":
+        #         buildTreeFromMAM(path, mediaPath, logfile, myx_args.params.dry_run)
 
-            case "audible":
-                buildTreeFromData(path, mediaPath, logfile, myx_args.params.dry_run)
+        #     case "audible":
+        #         buildTreeFromData(path, mediaPath, logfile, myx_args.params.dry_run)
         
-            case "hybrid":
-                buildTreeFromHybridSources(path, mediaPath, logfile, myx_args.params.dry_run)
+        #     case "mam-audible":
+        #         buildTreeFromHybridSources(path, mediaPath, logfile, myx_args.params.dry_run)
 
-            case _:
-                print ("This feature is coming soon! Right now, only audible and mam are supported")
+        #     case _:
+        #         print ("This feature is coming soon! Right now, only audible and mam are supported")
     
         # #for files with matches, hardlink them
         # if (len(matchedFiles)):
