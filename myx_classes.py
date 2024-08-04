@@ -141,7 +141,8 @@ class BookFile:
             metadata=self.__probe_file()["format"]["tags"]
         except Exception as e:
             metadata=dict()
-            print ("ffprobe failed: {}".format(e))
+            if myx_args.params.verbose:
+                print (f"ffprobe failed on {self.file}: {e}")
 
         #parse and create a book object
         # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
@@ -409,7 +410,8 @@ class MAMBook:
         try:
             metadata=myx_utilities.probe_file(file)["format"]["tags"]
         except Exception as e:
-            print ("ffprobe failed: {}".format(e))
+            if myx_args.params.verbose:
+                print (f"ffprobe failed on {self.name}: {e}")
 
         if (metadata is not None):
             #parse and create a book object
@@ -475,7 +477,7 @@ class MAMBook:
         #pprint(book)
         
         keywords=title
-        print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tkeywords:{keywords}\n")
+        print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tkeywords:{keywords}")
         #search each author until a match is found
         for author in book.authors:
             sAuthor=myx_utilities.cleanseAuthor(author.name)
@@ -486,7 +488,8 @@ class MAMBook:
                 break
         
         self.audibleMatches=books
-        print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
+        if myx_args.params.verbose:
+            print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
 
         if (len(self.audibleMatches) > 1):
             #find the best match
@@ -524,17 +527,21 @@ class MAMBook:
             self.metadata = "id3"
 
         if (self.metadataBook is not None):
-            print (f"Hardlinking files for {self.metadataBook.title}")
+            if myx_args.params.verbose:
+                print (f"Hardlinking files for {self.metadataBook.title}")
             #for each file for this book                
             for f in self.files:
                 #if a book belongs to multiple series, hardlink them to all series
                 for p in f.getTargetPaths(self.metadataBook):
                     if (not dryRun):
                         f.hardlinkFile(f.fullPath, os.path.join(targetFolder,p))
-                    print ("Hardlinking {} to {}".format(f.fullPath, os.path.join(targetFolder,p)))
+                    
+                    if myx_args.params.verbose:
+                        print (f"Hardlinking {f.fullPath} to {os.path.join(targetFolder,p)}")
                 f.isHardLinked=True
-
-                print("\n", 40 * "-", "\n")
+                
+                if myx_args.params.verbose:
+                    myx_utilities.printDivider()
 
     def isMatched(self):
         return bool(((self.bestMAMMatch is not None) or (self.bestAudibleMatch is not None)))
@@ -580,9 +587,11 @@ class MAMBook:
             authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
 
         # Search using book key and authors (using or search in case the metadata is bad)
-        print(f"Searching MAM for\n\ttitle or FileName:{titleFilename}\n\tauthors:{authors}\n")
+        print(f"Searching MAM for\n\ttitle or FileName:{titleFilename}\n\tauthors:{authors}")
         self.mamMatches=myx_mam.getMAMBook(session, titleFilename=titleFilename, authors=authors)
-        print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
+        
+        if myx_args.params.verbose:
+            print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
         
         #find the best match
         if (len(self.mamMatches) > 1):

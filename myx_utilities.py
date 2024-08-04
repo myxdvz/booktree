@@ -211,9 +211,10 @@ def findBookFiles (baseFileList, filegrouping):
     return findBookFiles(updatedFileList, filegrouping)
 
 def isMultiBookCollection (mamBook):
-    print (f"Checking {mamBook.name} file {range(len(mamBook.files))} files")
+    if myx_args.params.verbose:
+        print (f"Checking {mamBook.name} file {range(len(mamBook.files))} files")
+    
     filegrouping=[]
-
     if len(mamBook.files) > 1:
         #for i in range(len(mamBook.files)-1):
         filegrouping = findBookFiles(mamBook.files, filegrouping)
@@ -242,5 +243,6 @@ def findBestMatch(targetBook, books):
     
     return bestMatchedBook
 
-
+def printDivider (char="-", length=40):
+    print("\n", length * char, "\n")
     

@@ -13,6 +13,7 @@ import myx_args
 allFiles=[]
 multiBookCollections=[]
 multiFileCollections=[]
+normalBooks=[]
 matchedFiles=[]
 unmatchedFiles=[]
 audibleAuthFile=""
@@ -84,11 +85,14 @@ def buildTreeFromMAM (path, mediaPath, logfile, dryRun=False):
                 bf.audibleMatches.extend(matchBook)
 
 def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
-    print (f"Building tree from Hybrid Sources:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}\n\n")
+    print (f"Building tree from Hybrid Sources:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}\n")
     book={}
 
     #Let's assume that all books are folders, so a file has a parent folder
+    print(f"\nCategorizing books from {len(allFiles)} files, please wait...")
     for f in allFiles:
+        #for each book file
+        print(f"Categorizing: {f}...\r", end="\r")
         #create a bookFile
         fullpath=os.path.join(myx_args.params.source_path, f)
         bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
@@ -115,7 +119,6 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             book[hashKey].isSingleFile=bf.hasNoParentFolder()
             book[hashKey].files.append(bf)
 
-    #for multi-file folders/book - check if there are any multi-book collections
     for b in book.keys():
         #if this is a multifile book
         if len(book[b].files) > 1:
@@ -123,7 +126,8 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             if (isMultiBookCollection):
                 book[b].isMultiBookCollection=True
                 multiBookCollections.append(book)
-                print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
+                if myx_args.params.verbose:
+                    print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
 
                 if myx_args.params.verbose:
                     for b in newBooks:
@@ -134,8 +138,19 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             else:
                 book[b].isMultiFileBook=True
                 multiFileCollections.append(book)
-                print (f"{book[b].name} is a multi-FILE collection")
-            
+                if myx_args.params.verbose:
+                    print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
+        else:
+            #single file books
+            if myx_args.params.verbose:
+                print (f"{book[b].name} is a single file book")
+
+
+    #for multi-file folders/book - check if there are any multi-book collections
+    normalCount = len(book) - len(multiFileCollections) - len(multiBookCollections)
+    print(f"\n\nCategorized {len(allFiles)} files into {normalCount} normal books, {len(multiFileCollections)} multi-file books and {len(multiBookCollections)} multi-book collections")
+    myx_utilities.printDivider()
+
     #OK, now that you have categorized the files, we can start processing them
     #At this point all Book files should have already been probed
 
@@ -143,22 +158,12 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
 
     #Find Book Matches from MAM and Audible
-    for b in book.keys():
-        print("Processing: {}...", book[b].name)
-
-        if myx_args.params.verbose:
-            print("Processing: {}...", book[b].name)
-        
+    for b in book.keys():    
         if (not book[b].isMultiBookCollection):
-            if (book[b].isSingleFile):
-                #this is a single file or a book folder with multiple files, process them the same way
-                print (f"{book[b].name} is a single file book\n")
-
-            if (book[b].isMultiFileBook):
-                #this is a book with multiple files under the folder
-                print (f"{book[b].name} is a multi-file book\n")
-
-            #Process these two the same way, essentially based on the first book in the file list
+            #processed book
+            print(f"Processing: {book[b].name}...")
+            normalBooks.append(book[b])            
+            #Process these books the same way, essentially based on the first book in the file list
             bf = book[b].files[0]
 
             #search MAM record
@@ -168,28 +173,36 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             book[b].getAudibleBooks(client)
 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
+            myx_utilities.printDivider()
 
-            matchedFiles.append(book[b])
+            #if matched, add to matchedFiles
+            if book[b].isMatched():
+                matchedFiles.append(book[b])
+            else:
+                unmatchedFiles.append(book[b])
 
-            #pprint(book[b])
             if myx_args.params.verbose:
-                print("Book: {}\nfiles: {}\nmamCount: {}\naudibleCount: {}".format(book[b].name, len(book[b].files), len(book[b].mamMatches), len(book[b].audibleMatches)))
-                if (book[b].bestAudibleMatch is not None):
-                    print("Best Match Book:{}, Author:{}, Series:{}".format(book[b].bestAudibleMatch.title,book[b].bestAudibleMatch.authors, book[b].bestAudibleMatch.series))
+                pprint(book[b])
         
     #disconnect
     myx_audible.audibleDisconnect(auth)
 
     #Create Hardlinks
+    print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
     for mb in matchedFiles:
         mb.createHardLinks(mediaPath,dryRun)
 
     #Logging processed files
-    myx_utilities.logBooks(logfile, matchedFiles)  
+    print (f"\nLogging {len(normalBooks)} processed books")
+    myx_utilities.logBooks(logfile, normalBooks)  
 
-    print(f"Completed processing {len(book)} books. {len(matchedFiles)}/{len(book) - len(matchedFiles)} match/unmatch ratio.")                 
-
+    print(f"\nCompleted processing {len(normalBooks)} books. {len(matchedFiles)}/{len(normalBooks) - len(matchedFiles)} match/unmatch ratio.", end=" ")                 
+    if (len(multiBookCollections)):
+        print(f"{len(multiBookCollections)} multi-book collection skipped (future update!)")                 
+    
+    print("\n\n")
     return
+
 
 def main():
     #create the logfile

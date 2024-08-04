@@ -9,7 +9,9 @@ import myx_args
 
 #MyAudible Functions
 def audibleConnect(authMode, authFile, locale="us"):
-    print (f"Authenticating via {authMode} : locale = {locale} authfile = {authFile}...")
+    if myx_args.params.verbose:
+        print (f"Authenticating via {authMode} : locale = {locale}, authfile = {authFile}...")
+
     match authMode:
         case "browser": 
             auth = audible.Authenticator.from_login_external(locale)
@@ -43,7 +45,9 @@ def authenticateByLogin(authFilename, username, password):
     return auth
 
 def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords=""):
-    print (f"getAudibleBook >> asin:{asin}, title:{title}, authors:{authors}, narrators:{narrators}, keywords:{keywords}")
+    if myx_args.params.verbose:
+        print (f"getAudibleBook\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
+    
     enBooks=[]
     try:
         books = client.get (
