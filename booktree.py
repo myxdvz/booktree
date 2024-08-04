@@ -1,564 +1,23 @@
-
-import audible
-from dataclasses import dataclass
-from dataclasses import field
-import json
-import os, sys, subprocess, shlex, re
-from subprocess import call
 from pathlib import Path
 from pprint import pprint
-import posixpath
-import csv
 from datetime import datetime
-from thefuzz import fuzz
 from glob import iglob, glob
-import argparse
-import unicodedata
+import os, sys, subprocess, shlex, re
+import myx_classes
+import myx_audible
+import myx_utilities
+import myx_mam
+import myx_args
 
-#Utilities
-def cleanseAuthor(author):
-    #remove some characters we don't want on the author name
-    stdAuthor=strip_accents(author)
+#Global Vars
+allFiles=[]
+multiBookCollections=[]
+multiFileCollections=[]
+matchedFiles=[]
+unmatchedFiles=[]
+audibleAuthFile=""
 
-    #remove some characters we don't want on the author name
-    for c in ["- editor", " - ", "'"]:
-        stdAuthor=stdAuthor.replace(c,"")
-
-    #replace . with space, and then make sure that there's only single space between words)
-    stdAuthor=" ".join(stdAuthor.replace("."," ").split())
-    return stdAuthor
-
-def getList(items, field="name", delimiter=","):
-    return delimiter.join([str(strip_accents(item.name)) for item in items])
-
-def fuzzymatch(x:str, y:str):
-    #remove .:_-, for fuzzymatch
-    symbols=".:_-'[]"
-    newX=x.replace(symbols, "")
-    newY=y.replace(symbols, "")
-    if (len(newX) and len(newY)):
-        newZ=fuzz.token_sort_ratio(newX, newY)
-        print ("{} Fuzzy Match {}={}".format(newZ, newX, newY))
-        return newZ
-    else:
-        return 0
-    
-def optimizeKeys(keywords, delim=" "):
-    #keywords is a list of stuff, we want to convert it in a comma delimited string
-    kw=[]
-    for k in keywords:
-        k=k.replace("["," ").replace("]"," ").replace("{"," ").replace("}"," ").replace(".", " ").replace("_", " ").replace("("," ").replace(")"," ").replace(":"," ").replace(","," ").replace(";", " ")
-        #parse this item "-"
-        for i in k.split("-"):
-            #parse again on spaces
-            for j in i.split():
-                #if it's numeric like 02, make it an actual digit
-                if (not j.isdigit()):
-                    #remove any articles like a, i, the
-                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks"])):
-                        kw.append(j.lower())
-
-    #now return comma delimited string
-    return delim.join(map(str,kw))
-
-def getParentFolder(file):
-    #We normally assume that the file is in a folder, but some files are NOT in a subfolder
-    parent=os.path.dirname(file)
-    #check if the parent folder matches the source folder
-    if (parent == args.source_path):
-        #this file is bad and has no parent folder, use the filename as the parent folder
-        return os.path.basename(file)
-    else:
-        return (parent.split("/")[-1])
-
-def strip_accents(s):
-    return ''.join(c for c in unicodedata.normalize('NFD', s)
-                    if unicodedata.category(c) != 'Mn')
-
-#MyAudible Functions
-def authenticateByFile(authFilename):
-    auth = audible.Authenticator.from_file(authFilename)
-    return auth
-
-def authenticateByLogin(authFilename, username, password):
-    auth = audible.Authenticator.from_login(username, password, locale="us")
-
-    # store credentials to file
-    auth.to_file(filename=authFilename, encryption="json", password=password)
-
-    # save again
-    auth.to_file()
-
-    # load credentials from file
-    auth = audible.Authenticator.from_file(filename=authFilename, password=password)
-    return auth
-
-def audibleConnect(username, password) -> None:
-    filename="/config/code/booktree/maried.json"
-    auth = authenticateByLogin(filename, username, password)
-    client = audible.Client(auth) 
-    return (auth, client) 
-
-def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords=""):
-    print ("getAudibleBook >> asin:{}, authors:{}, parent:{}, narrators:{}, keywords:{} ".format(asin, authors, title.replace(" (Unabridged)",""), narrators, keywords))
-    enBooks=[]
-    try:
-        books = client.get (
-            path=f"catalog/products",
-            params={
-                "asin": asin,
-                "title": title.replace(" (Unabridged)",""),
-                "author": strip_accents(authors),
-                "narrator": strip_accents(narrators),
-                "keywords": keywords,
-                "response_groups": (
-                    "sku, series, product_attrs, relationships, contributors,"
-                    "product_extended_attrs, product_desc, product_plan_details"
-                )
-            },
-        )
-        for book in books["products"]:
-            #ignore non-english books
-            if (book["language"] == "english"):
-                enBooks.append(book)
-
-        print("Found ", len(enBooks), " books")
-        return enBooks
-    except Exception as e:
-        print(e)
-
-def getBookByAsin(client, asin):
-    print ("getBookByASIN: ", asin)
-    try:
-        book = client.get (
-            path=f"catalog/products/{asin}",
-            params={
-                "response_groups": (
-                    "sku, series, product_attrs, relationships, contributors,"
-                    "product_extended_attrs, product_desc, product_plan_details"
-                )
-            },
-        )
-        return book["product"]
-    except Exception as e:
-        print(e)
-
-def getBookByAuthorTitle(client, author, title):
-    print ("getBookByAuthorTitle: ", author, ", ", title)
-    enBooks=[]
-    try:
-        books = client.get (
-            path=f"catalog/products",
-            params={
-                "author": strip_accents(author),
-                "title": title,
-                "response_groups": (
-                    "sku, series, product_attrs, relationships, contributors,"
-                    "product_extended_attrs, product_desc, product_plan_details"
-                )
-            },
-        )
-        for book in books["products"]:
-            #ignore non-english books
-            if (book["language"] == "english"):
-                enBooks.append(book)
-
-        print("Found ", len(enBooks), " books")
-        return enBooks
-    except Exception as e:
-        print(e)
-
-def audibleDisconnect(auth):
-    # deregister device when done
-    auth.deregister_device()
-
-#Author and Narrator Classes
-@dataclass
-class Contributor:
-    name:str
-    #books:list[int]= field(default_factory=list)
-
-#Series Class
-@dataclass
-class Series:
-    name:str=""
-    part:str=""
-    
-    def getSeriesPart(self):
-        if (len(self.part.strip()) > 0):
-            return "{} #{}".format(self.name, str(self.part))
-        else:
-            return self.name
-
-#Book Class
-@dataclass
-class Book:
-    asin:str=""
-    title:str=""
-    subtitle:str=""
-    publicationName:str=""
-    length:int=0
-    duration:str=""
-    matchRate=0
-    series:list[Series]= field(default_factory=list)
-    authors:list[Contributor]= field(default_factory=list)
-    narrators:list[Contributor]= field(default_factory=list)
-    files:list[str]= field(default_factory=list)
-
-    def addFiles(self, file):
-        self.files.append(file)
-
-    def getFullTitle(self, field="subtitle"):
-        title=""
-        if field == "series":
-            if (len(self.series) > 0):
-                title= self.title + ": " + self.series[0].getSeriesPart()
-        else:
-            title=self.title + ": " + self.subtitle
-        
-        return title
-    
-    def getCleanTitle(self):
-        #Removes (Unabdridged from the title)
-        return self.title.replace (" (Unabridged)","")
-    
-    def getAuthors(self, delimiter=","):
-        return getList(self.authors)
-    
-    def getSeries(self, delimiter=","):
-        return getList(self.series)
-    
-    def getNarrators(self, delimiter=","):
-        return getList(self.narrators) 
-    
-    def getSeriesParts(self, delimiter=","):
-        return delimiter.join([str(s.getSeriesPart()) for s in self.series])
-
-    def getDictionary(self, book):
-        book["matchRate"]=self.matchRate
-        book["asin"]=self.asin
-        book["title"]=self.title
-        book["subtitle"]=self.subtitle
-        book["publicationName"]=self.publicationName
-        book["length"]=self.length
-        book["duration"]=self.duration
-        book["series"]=self.getSeries()
-        book["authors"]=self.getAuthors()
-        book["narrators"]=self.getNarrators()
-        book["seriesparts"]=self.getSeriesParts()
-        return book  
-    
-#Book File Class
-@dataclass
-class BookFile:
-    file:posixpath
-    sourcePath:str
-    isMatched:bool=False
-    isHardlinked:bool=False
-    audibleMatch:Book=None
-    ffprobeBook:Book=None
-    audibleMatches:dict=field(default_factory=dict)
-
-    def __probe_file(self):
-        #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
-        cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', self.sourcePath]
-        p = subprocess.Popen(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err =  p.communicate()
-        return json.loads(out)
-    
-    def ffprobe(self):
-        #ffprobe the file
-        try:
-            metadata=self.__probe_file()["format"]["tags"]
-        except Exception as e:
-            metadata=dict()
-            print ("ffprobe failed: {}".format(e))
-
-        #parse and create a book object
-        # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
-        #{'format': {'tags': {'title': 'MatchUp', 'artist': 'Lee Child - editor, Val McDermid, Charlaine Harris, John Sandford, Kathy Reichs', 'composer': 'Laura Benanti, Dennis Boutsikaris, Gerard Doyle, Linda Emond, January LaVoy, Robert Petkoff, Lee Child', 'album': 'MatchUp'}}}
-        book=Book()
-        if 'AUDIBLE_ASIN' in metadata: book.asin=metadata["AUDIBLE_ASIN"]
-        if 'title' in metadata: book.title=metadata["title"]
-        if 'subtitle' in metadata: book.subtitle=metadata["subtitle"]
-        #series and part, if provided
-        if (('SERIES' in metadata) and ('PART' in metadata)): 
-            book.series.append(Series(metadata["SERIES"],metadata["PART"]))
-        #parse album, assume it's a series
-        if 'album' in metadata: book.series.append(Series(metadata["album"],""))
-        #parse authors
-        if 'artist' in metadata: 
-            for author in metadata["artist"].split(","):
-                book.authors.append(Contributor(author))
-        #parse narrators
-        if 'composer' in metadata: 
-            for narrator in metadata["composer"].split(","):
-                book.narrators.append(Contributor(narrator))
-        #return a book object created from  ffprobe
-        self.ffprobeBook=book
-        pprint (book)
-        return book
-    
-    def __getAudibleBook(self, product):
-        #product is an Audible product json
-        if product is not None:
-            book=Book()
-            if 'asin' in product: book.asin=product["asin"]
-            if 'title' in product: book.title=product["title"]
-            if 'subtitle' in product: book.subtitle=product["subtitle"]
-            if 'runtime_length_min' in product: book.length=product["runtime_length_min"]
-            if 'authors' in product: 
-                for author in product["authors"]:
-                    book.authors.append(Contributor(author["name"]))
-            if 'narrators' in product: 
-                for narrator in product["narrators"]:
-                    book.narrators.append(Contributor(narrator["name"]))
-            if 'publication_name' in product: book.publicationName=product["publication_name"]
-            if 'relationships' in product: 
-                for relationship in product["relationships"]:
-                    #if this relationship is a series
-                    if (relationship["relationship_type"] == "series"):
-                        book.series.append(Series(relationship["title"], relationship["sequence"]))
-            pprint (book)
-            return book
-        else:
-            return None
-        
-    def matchBook(self, client, matchRate=75):
-        #given book file, ffprobe and audiblematches, return the best match
-        parent = getParentFolder(self.sourcePath).replace(" (Unabridged)", "")
-
-        #first, read the ID tags
-        ffprobeBook=self.ffprobe()
-        asin=ffprobeBook.asin
-        keywords=optimizeKeys([parent])
-
-        #catalog/products asin, author, title, keywords
-        # books=getAudibleBook(client, asin, ffprobeBook.getAuthors(), parent, keywords)
-        # if books is not None:
-        #     print ("Found {} books".format(len(books)))
-        #     for book in books:
-        #         self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-
-        # Strategy#1:  If an ASIN was in the ID Tag, search by ASIN
-        if len(ffprobeBook.asin) > 0:
-            print ("Getting Book by ASIN ", ffprobeBook.asin)
-            book=self.__getAudibleBook(getBookByAsin(client, ffprobeBook.asin))
-            if ((book is not None) and (fuzzymatch(ffprobeBook.title, book.title) > matchRate)):
-                self.audibleMatch=book
-                self.isMatched=True
-
-        # Strategy #2:  ASIN search was a bust, try a wider search (Author, Title, Keywords)
-        #asin might be available but a match wasn't found, try Author/Title Search        
-        if (not self.isMatched):
-            fBook=""
-
-            #check if an author was found
-            if (len(ffprobeBook.authors) == 0):
-                author=""
-            else:
-                author=ffprobeBook.authors[0].name
-
-            #Use Case:  If title or author are missing, perform a keyword search with whatever is available with the ID3 tags
-            if ((len(author)==0) and len(ffprobeBook.title) ==0):
-                keywords=optimizeKeys([parent],",")
-                # Option #1: find book by artist or title (using parent folder)
-                print ("No ID3 tags Getting Book by Parent Folder: {}".format(keywords))
-                books=getAudibleBook(client, keywords=keywords)
-                if books is not None:
-                    print ("Found {} books".format(len(books)))
-                    for book in books:
-                        self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                        #self.audibleMatches.append(self.__getAudibleBook(book))
-                # For Fuzzy Match, just use Keywords
-                fBook=keywords
-            else:
-                #there's at least some metadata available
-                #fBook="{},{},{},{},{}".format(ffprobeBook.title,ffprobeBook.subtitle, ffprobeBook.getAuthors("|"), ffprobeBook.getNarrators("|"),ffprobeBook.getSeriesParts())
-
-                #Use Case : Clean ID3, there's an author, a title, a narrator
-                if (len(ffprobeBook.title)):
-                    keywords=optimizeKeys([ffprobeBook.getAuthors(),ffprobeBook.getNarrators()])
-                    print ("Getting Book by Title:{} & Keywords:'{}'".format(ffprobeBook.title, keywords))
-                    books=getAudibleBook(client, title=ffprobeBook.title, keywords=keywords)
-                    if books is not None:
-                        print ("Found {} books".format(len(books)))
-                        fBook="{},{}".format(ffprobeBook.title, keywords)
-                        for book in books:
-                            self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                            #self.audibleMatches.append(self.__getAudibleBook(book))             
-
-                if (len(self.audibleMatches) == 0):
-                    #Use Case: Author, Title, Narrator is too narrow - we're putting these values as keywords with the folder name
-                    if (len(ffprobeBook.title)):
-                        keywords=optimizeKeys([parent,ffprobeBook.getAuthors()])
-                        print ("Getting Book by Keyword using Parent Folder/Author/Title as keywords {}".format(keywords))
-                        books=getAudibleBook(client, title=ffprobeBook.title, keywords=keywords)
-                        if books is not None:
-                            print ("Found {} books".format(len(books)))
-                            fBook="{},{},{}".format(parent,ffprobeBook.title,ffprobeBook.getAuthors())
-                            for book in books:
-                                self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                                #self.audibleMatches.append(self.__getAudibleBook(book))             
-
-                    #Use Case: Clean ID3, but didn't find a match, try a wider search - normally because it's a multi-file book and the parent folder is the title
-                    if (len(self.audibleMatches) == 0):
-                        print ("Performing wider search...")
-
-                        # Use Case: ID3 has the author, the parent folder is ONLY the title
-                        print ("Getting Book by Parent Folder Title: {}".format(parent))
-                        #books=getBookByAuthorTitle(client, author, parent)
-                        keywords=optimizeKeys([parent])
-                        books=getAudibleBook(client, keywords=keywords)                        
-                        if books is not None:
-                            print ("Found {} books".format(len(books)))
-                            fBook=parent
-                            for book in books:
-                                self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                                #self.audibleMatches.append(self.__getAudibleBook(book))
-                        
-                        # Use Case:  ID3 has the author, and the album is the title
-                        if (len(ffprobeBook.series) > 0):
-                            print ("Getting Book by Album Title: {}, {}".format(author, ffprobeBook.series[0].name))
-                            if (len(ffprobeBook.series) > 0):
-                                books=getBookByAuthorTitle(client, author, ffprobeBook.series[0].name)
-                                if books is not None:
-                                    print ("Found {} books".format(len(books)))
-                                    fBook+=",{},{}".format(author, ffprobeBook.series[0].name)
-                                    for book in books:
-                                        self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                                        #self.audibleMatches.append(self.__getAudibleBook(book)) 
-
-            # check if there's an actual Match from Audible
-            # if there's exactly 1 match, assume it's good
-            if (len(self.audibleMatches) == 1):
-                for i in self.audibleMatches.values():
-                    self.audibleMatch=i
-                    self.isMatched=True
-            else:
-                print ("Finding the best match out of {}".format(len(self.audibleMatches)))
-                if (len(self.audibleMatches) > 1):
-                    #find the highest match, start with 0
-                    bestMatchRatio=0
-                    bestMatchedBook=None
-                    for book in self.audibleMatches.values():
-                        #do fuzzymatch with all these combos, get the highest value
-                        aBook="{},{},{}".format(book.title,book.getAuthors("|"),book.getSeriesParts("|"))
-                        matchRatio=fuzzymatch(fBook,aBook)
-
-                        #set this books matchRatio
-                        book.matchRate=matchRatio
-                        
-                        if (matchRatio > bestMatchRatio):
-                            print("Found a better match!{} > {}", matchRatio, bestMatchRatio)
-                            #this is the new best
-                            bestMatchRatio = matchRatio
-                            bestMatchedBook = book
-
-                    if (bestMatchRatio > matchRate):
-                        self.isMatched=True
-                        self.audibleMatch=bestMatchedBook
-                        print ("{} Match found: {}".format(bestMatchRatio, bestMatchedBook.title))
- 
-    def hardlinkFile(self, source, target):
-        #add target to base Media folder
-        destination = os.path.join("/data/media/audiobooks/mam", target)
-        print ("Destination {}-{}".format(destination, os.path.join("/data/media/audiobooks/test", target)))
-        #check if the target path exists
-        if (not os.path.exists(destination)):
-            #make dir path
-            print ("Creating target directory ", destination)
-            os.makedirs(destination)
-        
-        #check if the file already exists in the target directory
-        filename=os.path.join(destination, os.path.basename(source).split('/')[-1])
-        if (not os.path.exists(filename)):
-            print ("Hardlinking {} to {}".format(source, filename))
-            try:
-                os.link(source, filename)
-                self.isHardlinked=True
-            except Exception as e:
-                print ("Failed to hardlink {} to {} due to:".format(source, filename, e))
-
-        return self.isHardlinked
-    
-    def getTargetPaths(self, book):
-        paths=[]
-        if (book is not None):
-            #Get primary author
-            if ((book.authors is not None) and (len(book.authors) == 0)):
-                author="Unknown"
-            else:
-                author=book.authors[0].name  
-
-            #standardize author name (replace . with space, and then make sure that there's only single space)
-            stdAuthor=cleanseAuthor(author)
-
-            #Does this book belong in a series?
-            if (len(book.series) > 0):
-                for s in book.series:
-                    paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, s.getSeriesPart(), book.title))
-            else:
-                paths.append("{}/{}/".format(stdAuthor, book.title))   
-
-        return paths  
-    
-    def getLogRecord(self, bookMatch:Book):
-        #returns a dictionary of the record that gets logged
-        book={
-            "file":self.sourcePath,
-            "isMatched": self.isMatched,
-            "isHardLinked": self.isHardlinked,
-        }
-
-        book=bookMatch.getDictionary(book)
-        book["paths"]=",".join(self.getTargetPaths(bookMatch))
-
-        return book
-    
-def createHardLinks(bookFiles:list[BookFile], targetFolder="", dryRun=False):
-    #hard link all the books in the list
-    for f in bookFiles:
-        #use Audible metadata or ID3 metadata
-        if f.isMatched:
-            book=f.audibleMatch
-        else:
-            book=f.ffprobeBook
-
-        #if there is a book
-        if (book is not None):
-            #if a book belongs to multiple series, hardlink them to tall series
-            for p in f.getTargetPaths(book):
-                if (not dryRun):
-                    f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
-                print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
-            print("\n", 40 * "-", "\n")
-
-def logBookRecords(logFilePath, bookFiles:list[BookFile]):
-
-    write_headers = not os.path.exists(logFilePath)
-    with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
-        try:
-            for f in bookFiles:
-                #get book records to log
-                if (f.isMatched):
-                    row=f.getLogRecord(f.audibleMatch)
-                else:
-                    row=f.getLogRecord(f.ffprobeBook)
-                #get fieldnames
-                row["audiblematches"]=len(f.audibleMatches)
-                fields=row.keys()
-
-                #create a writer
-                writer = csv.DictWriter(csv_file, fieldnames=fields)
-                if write_headers:
-                    writer.writeheader()
-                    write_headers=False
-                writer.writerow(row)
-
-        except csv.Error as e:
-            print("file {}: {}".format(logFilePath, e))
-
+#Main Functions
 def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
     #read from the logfile - generate book files from there
 
@@ -566,58 +25,23 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
     return    
 
 def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
-    allFiles=[]
-    matchedFiles=[]
-    unmatchedFiles=[]
-
-    #grab all files and put it in allFiles
-    #if there were no patters provided, grab ALL known audiobooks, currently these are M4B and MP3 files
-    if (len(args.file)==0):
-        for f in ("**/*.m4b","**/*.mp3"):
-            print ("Looking for {} from {}".format(f, path))
-            allFiles.extend(iglob(f, root_dir=args.source_path, recursive=True))
-    else:
-        #find all files that fit the input pattern - escape [] for glob to work
-        pattern = args.file.translate({ord('['):'[[]', ord(']'):'[]]'})
-        #find all files that fit the input pattern
-        print ("Looking for {} from {}".format(pattern, path))
-        allFiles.extend(iglob(pattern, root_dir=path, recursive=True))
-
-    #Print how many files were found...
-    print ("Found {} files to process...".format(len(allFiles)))
-    
-    # for f in allFiles:
-    #     fullpath=os.path.join(args.source_path, f)
-    #     print("f:{}, fp:{}\n\n".format(f, fullpath))
-
+    print (f"Building tree structure using Audible metadata:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}")
     #if files were found, process them all
     if (len(allFiles)>0):
-        filename=os.path.join(args.log_path, "booktree.json")
-        print(filename)
-        match args.auth:
-            case "browser": 
-                print ("Authenticating via browser...")
-                auth = audible.Authenticator.from_login_external(locale="us")
-            case "file":
-                print ("Authenticating via file...")
-                auth = authenticateByFile(filename)
-            case _:
-                print ("Authenticating via login...")
-                auth = authenticateByLogin(filename, args.user, args.pwd)
-        client = audible.Client(auth)
+        auth, client = myx_audible.audibleConnect(myx_args.params.auth,audibleAuthFile)
 
         for f in allFiles:
-            fullpath=os.path.join(args.source_path, f)
+            fullpath=os.path.join(myx_args.params.source_path, f)
             print ("Processing {}".format(fullpath))
             # create a Book File object and add it to the list of files to be processed
-            bf=BookFile(f, fullpath)
+            bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
             
             # probe this file
             # print ("Performing ffprobe...")
             # bf.ffprobe()
             # do an audible match
             print ("Performing ffprobe and audible match...")
-            bf.matchBook(client,args.match)
+            bf.matchBook(client,myx_args.params.match)
             # if there is match, put it in the to be hardlinked pile
             if bf.isMatched:
                 print ("Match found")
@@ -628,88 +52,216 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
                 pprint(bf.ffprobeBook)
                 unmatchedFiles.append(bf)
             print("\n", 40 * "-", "\n")
+
         # deregister device when done
-        auth.deregister_device()
+        myx_audible.audibleConnect(auth)
 
-        #for files with matches, hardlink them
-        print ("Creating hard links for matched files...")
-        createHardLinks(matchedFiles, mediaPath, False)
-
-        #log matched files
-        print ("Logging matched books...")
-        logBookRecords(logfile, matchedFiles)
-
-        #for files with matches, hardlink them
-        print ("Creating hard links for unmatched files...")
-        createHardLinks(unmatchedFiles, mediaPath, False)
-
-        #log unmatched files
-        print ("Logging unmatched books...")
-        logBookRecords(logfile, unmatchedFiles)  
-
-        #Completed
-        print("Completed processing {} files. {}/{} match/unmatch ratio.".format(len(allFiles), len(matchedFiles), len(unmatchedFiles)))  
     else:
         #Pattern yielded no files
         print ("No files found to process")
 
-def standardizeAuthors(mediaPath, dryRun=False):
-    #get all authors from the source path
-    for f in iglob(os.path.join(mediaPath,"*"), recursive=False):
-        #ignore @eaDir
-        if (f != os.path.join(mediaPath,"@eaDir")):
-            oldAuthor=os.path.basename(f)
-            newAuthor=cleanseAuthor(oldAuthor)
-            if (oldAuthor != newAuthor):
-                print("Renaming: {} >> {}".format(f, os.path.join(os.path.dirname(f), newAuthor)))
-                if (not dryRun):
-                    try:
-                        Path(f).rename(os.path.join(os.path.dirname(f), newAuthor))
-                    except Exception as e:
-                        print ("Can't rename {}: {}".format(f, e))
+def buildTreeFromMAM (path, mediaPath, logfile, dryRun=False):
+    print (f"Building tree structure using MAM metadata:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}")
+    for f in allFiles:
+        fullpath=os.path.join(myx_args.params.source_path, f)
+        print ("Processing {}".format(fullpath))
+        bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
+        bf.ffprobe()
+
+        #search MAM by filename
+        matchBook=myx_mam.getMAMBook(myx_args.params.session, bf.ffprobeBook.title, bf.probeBook.getAuthors(), os.path.basename(f))
+        #pprint(matchBook)
+        if (len(matchBook)==1):
+            #Exact Match
+            bf.isMatched=True
+            bf.audibleMatch=matchBook[0]
+            matchedFiles.append(bf)
+            if myx_args.params.verbose:
+                pprint(bf.audibleMatch)
+        else:
+            unmatchedFiles.append(bf)
+            if (len(matchBook) > 1):
+                bf.audibleMatches.extend(matchBook)
+
+def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
+    print (f"Building tree from Hybrid Sources:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}\n\n")
+    book={}
+
+    #Let's assume that all books are folders, so a file has a parent folder
+    for f in allFiles:
+        #create a bookFile
+        fullpath=os.path.join(myx_args.params.source_path, f)
+        bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
+        bf.ffprobe()
+
+        if myx_args.params.verbose:
+            print ("Adding {}\nParent:{}".format(bf.fullPath,bf.getParentFolder()))
+
+        #create dictionary using book (assumed to be the the parent Folder) as the key
+        #if there's no parent folder, then the filename is the key
+        if bf.hasNoParentFolder():
+            key=bf.getFileName()
+        else:
+            key=bf.getParentFolder()
+        
+        #if the book exists, this must be multi-file book, append the files
+        hashKey=str(hash(key))
+        if hashKey in book:
+            book[hashKey].files.append(bf)
+        else:
+            #New MAMBook file has a name, a file and a ffprobeBook
+            book[hashKey]=myx_classes.MAMBook(key)
+            book[hashKey].ffprobeBook=bf.ffprobeBook
+            book[hashKey].isSingleFile=bf.hasNoParentFolder()
+            book[hashKey].files.append(bf)
+
+    #for multi-file folders/book - check if there are any multi-book collections
+    for b in book.keys():
+        #if this is a multifile book
+        if len(book[b].files) > 1:
+            newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
+            if (isMultiBookCollection):
+                book[b].isMultiBookCollection=True
+                multiBookCollections.append(book)
+                print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
+
+                if myx_args.parms.verbose:
+                    for b in newBooks:
+                        print(b.name)
+                        for f in b.files:
+                            print (f.file)
+                    #pprint (newBooks)
+            else:
+                book[b].isMultiFileBook=True
+                multiFileCollections.append(book)
+                print (f"{book[b].name} is a multi-FILE collection")
+            
+    #OK, now that you have categorized the files, we can start processing them
+    #At this point all Book files should have already been probed
+
+    #login to Audible
+    auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
+
+    #Find Book Matches from MAM and Audible
+    for b in book.keys():
+        print("Processing: {}...", book[b].name)
+
+        if myx_args.params.verbose:
+            print("Processing: {}...", book[b].name)
+        
+        if (not book[b].isMultiBookCollection):
+            if (book[b].isSingleFile):
+                #this is a single file or a book folder with multiple files, process them the same way
+                print (f"{book[b].name} is a single file book")
+
+            if (book[b].isMultiFileBook):
+                #this is a book with multiple files under the folder
+                print (f"{book[b].name} is a multi-file book")
+
+            #Process these two the same way, essentially based on the first book in the file list
+            bf = book[b].files[0]
+
+            #search MAM record
+            book[b].getMAMBooks(myx_args.params.session, bf)
+                
+            #now, Search Audible using either MAM (better) or ffprobe metadata
+            book[b].getAudibleBooks(client)
+
+            print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
+
+            #pprint(book[b])
+            if myx_args.params.verbose:
+                print("Book: {}\nfiles: {}\nmamCount: {}\naudibleCount: {}".format(book[b].name, len(book[b].files), len(book[b].mamMatches), len(book[b].audibleMatches)))
+                if (book[b].bestAudibleMatch is not None):
+                    print("Best Match Book:{}, Author:{}, Series:{}".format(book[b].bestAudibleMatch.title,book[b].bestAudibleMatch.authors, book[b].bestAudibleMatch.series))
+        
+    #disconnect
+    myx_audible.audibleDisconnect(auth)
+
+    #Create Hardlinks
+    print ("Hardlinking files")
+    for b in book.keys():
+        book[b].createHardLinks(mediaPath,dryRun)
+
+    #Logging
+    myx_utilities.logBooks(logfile, book)  
+
+    return
 
 def main():
+    #create the logfile
+    logfile=os.path.join(os.path.abspath(myx_args.params.log_path),"booktree_log_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")))
 
     #validate that source_path and media_path exists
-    path=args.source_path
-    mediaPath=args.media_path
-    logfile=os.path.join(os.path.abspath(args.log_path),"booktree_log_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")))
+    path=myx_args.params.source_path
+    mediaPath=myx_args.params.media_path
+
     if (os.path.exists(path) and os.path.exists(mediaPath)):
-        if (args.metadata == "audible"):
-            print ("Building tree structure using Audible metadata:\nSource:{}\nMedia:{}\nLog:{}".format(path,mediaPath,logfile))
-            buildTreeFromData(path, mediaPath, logfile, args.dry_run)
+        #grab all files and put it in allFiles
+        #if there were no patters provided, grab ALL known audiobooks, currently these are M4B and MP3 files
+        if (len(myx_args.params.file)==0):
+            for f in ("**/*.m4b","**/*.mp3"):
+                print (f"Looking for {f} from {path}")
+                allFiles.extend(iglob(f, root_dir=myx_args.params.source_path, recursive=True))
         else:
-            print ("This feature is coming soon! Right now, only audible is supported")
+            #find all files that fit the input pattern - escape [] for glob to work
+            pattern = myx_args.params.file.translate({ord('['):'[[]', ord(']'):'[]]'})
+            #find all files that fit the input pattern
+            print (f"Looking for {pattern} from {path}")
+            allFiles.extend(iglob(pattern, root_dir=path, recursive=True))
+
+        #Print how many files were found...
+        print (f"Found {len(allFiles)} files to process...\n\n")
+        
+        # for f in allFiles:
+        #     fullpath=os.path.join(myx_args.params.source_path, f)
+        #     print("f:{}, fp:{}\n\n".format(f, fullpath))
+        match myx_args.params.metadata:
+            case "mam":
+                buildTreeFromMAM(path, mediaPath, logfile, myx_args.params.dry_run)
+
+            case "audible":
+                buildTreeFromData(path, mediaPath, logfile, myx_args.params.dry_run)
+        
+            case "hybrid":
+                buildTreeFromHybridSources(path, mediaPath, logfile, myx_args.params.dry_run)
+
+            case _:
+                print ("This feature is coming soon! Right now, only audible and mam are supported")
+    
+        #for files with matches, hardlink them
+        if (len(matchedFiles)):
+            print ("Creating hard links for matched files...")
+            myx_utilities.createHardLinks(matchedFiles, mediaPath, False)
+
+            #log matched files
+            print ("Logging matched books...")
+            myx_utilities.logBookRecords(logfile, matchedFiles)
+
+        if (len(unmatchedFiles)):
+        #for files with matches, hardlink them
+            print ("Creating hard links for unmatched files...")
+            myx_utilities.createHardLinks(unmatchedFiles, mediaPath, False)
+
+            #log unmatched files
+            print ("Logging unmatched books...")
+            myx_utilities.logBookRecords(logfile, unmatchedFiles)  
+
+        #Completed
+        print(f"Completed processing {len(allFiles)} files. {len(matchedFiles)}/{len(unmatchedFiles)} match/unmatch ratio.")                 
+
     else:
-        print("Your source and media paths are invalid. Please check and try again!\nSource:{}\nMedia:{}".format(path,mediaPath))
+        print(f"Your source and media paths are invalid. Please check and try again!\nSource:{path}\nMedia:{mediaPath}")
 
 if __name__ == "__main__":
     
-    appDescription = """Reorganize your audiobooks using ID3 or Audbile metadata.\nThe originals are untouched and will be hardlinked to their destination"""
-    parser = argparse.ArgumentParser(prog="booktree", description=appDescription)
-    #you want a specific file or pattern
-    parser.add_argument("--file", default="", help="The file or files(s) you want to process.  Accepts * and ?. Defaults to *.m4b")
-    #path to source files, e.g. /data/torrents/downloads
-    parser.add_argument("--source_path", default=".", help="Where your unorganized files are")
-    #path to media files, e.g. /data/media/abs
-    parser.add_argument("--media_path", help="Where your organized files will be, i.e. your Audiobookshelf library", required=True)
-    #path to log files, e.g. /data/media/abs
-    parser.add_argument("--log_path", default="", help="Where your log files will be")
-    #dry-run
-    parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
-    #medata source (audible|id3|log)
-    parser.add_argument("metadata", choices=["audible","log"], default="audible", help="Source of the metada: (audible, log)")
-    #if medata source=audible, you need to provide your username and password
-    parser.add_argument("-auth", choices=["login","browser","file"], default="login")
-    parser.add_argument("-user", help="Your audible username", required=True)
-    parser.add_argument("-pwd", help="Your audible password", required=True)
-    parser.add_argument("-match", type=int, default=35, help="The min acceptable ratio for the fuzzymatching algorithm. Defaults to 35")
-    parser.add_argument("-log", help="The file path/name to be used as metadata input")
+    #process commandline arguments
+    myx_args.params = myx_args.importArgs()
 
-    #get all arguments
-    args = parser.parse_args()
-    if (len(args.log_path)==0):
-        args.log_path=os.path.join(os.getcwd(),"logs")
+    #add calculated parameters
+    audibleAuthFile=os.path.join(myx_args.params.log_path, "booktree.json")
+
+    #set
     #pprint(args)
 
     #start the program
