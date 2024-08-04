@@ -187,6 +187,8 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     #Logging processed files
     myx_utilities.logBooks(logfile, matchedFiles)  
 
+    print(f"Completed processing {len(book)} books. {len(matchedFiles)}/{len(book) - len(matchedFiles)} match/unmatch ratio.")                 
+
     return
 
 def main():
@@ -249,7 +251,7 @@ def main():
         #     myx_utilities.logBookRecords(logfile, unmatchedFiles)  
 
         #Completed
-        print(f"Completed processing {len(allFiles)} files. {len(matchedFiles)}/{len(unmatchedFiles)} match/unmatch ratio.")                 
+        #print(f"Completed processing {len(allFiles)} files. {len(matchedFiles)}/{len(allFiles) - len(unmatchedFiles)} match/unmatch ratio.")                 
 
     else:
         print(f"Your source and media paths are invalid. Please check and try again!\nSource:{path}\nMedia:{mediaPath}")
