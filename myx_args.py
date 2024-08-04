@@ -19,9 +19,9 @@ def importArgs():
     #dry-run
     parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
     #medata source (audible|id3|log)
-    parser.add_argument("metadata", choices=["audible","mam","hybrid"], default="audible", help="Source of the metada: (audible, log)")
+    parser.add_argument("metadata", choices=["audible","mam","hybrid"], default="hybrid", help="Source of the metada: (audible, mam, hybrid)")
     #if medata source=audible, you need to provide your username and password
-    parser.add_argument("-auth", choices=["login","browser","file"], default="login")
+    parser.add_argument("-auth", choices=["login","browser"], default="login", help="When you get the CFA prompts, switch to browser mode")
     parser.add_argument("-user", help="Your audible username", required=True)
     parser.add_argument("-pwd", help="Your audible password", required=True)
     parser.add_argument("--session", default="", help="Your session cookie")

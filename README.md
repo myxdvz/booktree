@@ -21,7 +21,7 @@ usage: python booktree.py [-h] {audible|log} -user USER -pwd PWD --source_path S
 | Flag | Description | Default Value |
 | ----------- | ----------- | ----------- |
 |  -h, --help |           Show this help message and exit||
-|  {audible,log} | Source of the metada: (audible,log)|audible|
+|  {audible,mam,hybrid} | Source of the metada: (audible,log)|hybrid|
 |  -user USER            |Your audible username|Required for audible|
 |  -pwd PWD              |Your audible password|Required for audible|
 |  --file FILE            |The file or files(s) you want to process.  Accepts * and ?|\*.m4b|
@@ -30,7 +30,8 @@ usage: python booktree.py [-h] {audible|log} -user USER -pwd PWD --source_path S
 |  --log_path LOG_PATH   |Where your log files will be|<booktree>/logs|
 |  -match MATCH          |The min acceptable ratio for the fuzzymatching algorithm| 35|
 |  --dry-run             |If provided, will only create logfile and not actually build the tree||
-
+|  --verbose            |If provided, will display more debug information||
+|  --session | If using mam or hybrid, include the MAM session ID||
 
 Note that using the log as the metadata source is still under development.  The intention is to allow a user to run the script using audible as metadata source in dry-run mode first to generate the log file and then in succeeding runs, use the log file as the input. This will allow the user to make edits and corrections in the log file to provide or correct any missing metadata before actually organizing the files.
 
