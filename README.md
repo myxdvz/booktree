@@ -3,11 +3,11 @@ Reorganize your audiobooks using ID3 and/or Audbile metadata. The originals are 
 
 It does the following:
 - take a source folder, ideally your downloads folder where your audiobook files are
-- recursively find all the M4B files in it, and for each file:
+- recursively find all the M4B/MP3 files in it, and for each file:
   - pull and parse metadata information from id3 tags
-  - using the id3 tags and the file information, attempt to pull metadata from Audible
+  - using the id3 tags and the file information, attempt to pull metadata from the Metadata sources
   - create a tree structure on the target folder, ideally your media folder (like your abs audiobook library folder)
-  - hardlink the M4B file to the target folder
+  - hardlink the audiobook file to the target folder
 
 **booktree** builds the following heirarchy on the target folder:
 * <media_path>/Author/Title (If there is no series information)
@@ -15,7 +15,7 @@ It does the following:
 
 ## Usage:
 ~~~
-usage: python booktree.py [-h] {audible|log} -user USER -pwd PWD --source_path SOURCE_PATH --media_path MEDIA_PATH [--log_path LOG_PATH] [-match MATCH] [--dry-run]
+usage: python booktree.py [-h] {mam|audible|mam-audible} [-user USER] [-pwd PWD] [--file FILE] --source_path SOURCE_PATH --media_path MEDIA_PATH [--log_path LOG_PATH] [--dry-run] [--verbose] [--session]
 ~~~
 
 | Flag | Description | Default Value |
@@ -28,7 +28,6 @@ usage: python booktree.py [-h] {audible|log} -user USER -pwd PWD --source_path S
 |  --source_path SOURCE_PATH|Where your unorganized files are|Required|
 |  --media_path MEDIA_PATH|Where your organized files will be, i.e. your Audiobookshelf library|Required|
 |  --log_path LOG_PATH   |Where your log files will be|<booktree>/logs|
-|  -match MATCH          |The min acceptable ratio for the fuzzymatching algorithm| 35|
 |  --dry-run             |If provided, will only create logfile and not actually build the tree||
 |  --verbose            |If provided, will display more debug information||
 |  --session | If using mam or mam-audible, include the MAM session ID||

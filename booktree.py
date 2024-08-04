@@ -25,64 +25,64 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
     #for each row, create hardlinks
     return    
 
-def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
-    print (f"Building tree structure using Audible metadata:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}")
-    #if files were found, process them all
-    if (len(allFiles)>0):
-        auth, client = myx_audible.audibleConnect(myx_args.params.auth,audibleAuthFile)
+# def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
+#     print (f"Building tree structure using Audible metadata:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}")
+#     #if files were found, process them all
+#     if (len(allFiles)>0):
+#         auth, client = myx_audible.audibleConnect(myx_args.params.auth,audibleAuthFile)
 
-        for f in allFiles:
-            fullpath=os.path.join(myx_args.params.source_path, f)
-            print ("Processing {}".format(fullpath))
-            # create a Book File object and add it to the list of files to be processed
-            bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
+#         for f in allFiles:
+#             fullpath=os.path.join(myx_args.params.source_path, f)
+#             print ("Processing {}".format(fullpath))
+#             # create a Book File object and add it to the list of files to be processed
+#             bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
             
-            # probe this file
-            # print ("Performing ffprobe...")
-            # bf.ffprobe()
-            # do an audible match
-            print ("Performing ffprobe and audible match...")
-            bf.matchBook(client,myx_args.params.match)
-            # if there is match, put it in the to be hardlinked pile
-            if bf.isMatched:
-                print ("Match found")
-                pprint(bf.audibleMatch)
-                matchedFiles.append(bf)
-            else:
-                print ("No Match found")
-                pprint(bf.ffprobeBook)
-                unmatchedFiles.append(bf)
-            print("\n", 40 * "-", "\n")
+#             # probe this file
+#             # print ("Performing ffprobe...")
+#             # bf.ffprobe()
+#             # do an audible match
+#             print ("Performing ffprobe and audible match...")
+#             bf.matchBook(client)
+#             # if there is match, put it in the to be hardlinked pile
+#             if bf.isMatched:
+#                 print ("Match found")
+#                 pprint(bf.audibleMatch)
+#                 matchedFiles.append(bf)
+#             else:
+#                 print ("No Match found")
+#                 pprint(bf.ffprobeBook)
+#                 unmatchedFiles.append(bf)
+#             print("\n", 40 * "-", "\n")
 
-        # deregister device when done
-        myx_audible.audibleDisconnect(auth)
+#         # deregister device when done
+#         myx_audible.audibleDisconnect(auth)
 
-    else:
-        #Pattern yielded no files
-        print ("No files found to process")
+#     else:
+#         #Pattern yielded no files
+#         print ("No files found to process")
 
-def buildTreeFromMAM (path, mediaPath, logfile, dryRun=False):
-    print (f"Building tree structure using MAM metadata:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}")
-    for f in allFiles:
-        fullpath=os.path.join(myx_args.params.source_path, f)
-        print ("Processing {}".format(fullpath))
-        bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
-        bf.ffprobe()
+# def buildTreeFromMAM (path, mediaPath, logfile, dryRun=False):
+#     print (f"Building tree structure using MAM metadata:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}")
+#     for f in allFiles:
+#         fullpath=os.path.join(myx_args.params.source_path, f)
+#         print ("Processing {}".format(fullpath))
+#         bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
+#         bf.ffprobe()
 
-        #search MAM by filename
-        matchBook=myx_mam.getMAMBook(myx_args.params.session, os.path.basename(fullpath), bf.ffprobeBook.getAuthors())
-        #pprint(matchBook)
-        if (len(matchBook)==1):
-            #Exact Match
-            bf.isMatched=True
-            bf.audibleMatch=matchBook[0]
-            matchedFiles.append(bf)
-            if myx_args.params.verbose:
-                pprint(bf.audibleMatch)
-        else:
-            unmatchedFiles.append(bf)
-            if (len(matchBook) > 1):
-                bf.audibleMatches.extend(matchBook)
+#         #search MAM by filename
+#         matchBook=myx_mam.getMAMBook(myx_args.params.session, os.path.basename(fullpath), bf.ffprobeBook.getAuthors())
+#         #pprint(matchBook)
+#         if (len(matchBook)==1):
+#             #Exact Match
+#             bf.isMatched=True
+#             bf.audibleMatch=matchBook[0]
+#             matchedFiles.append(bf)
+#             if myx_args.params.verbose:
+#                 pprint(bf.audibleMatch)
+#         else:
+#             unmatchedFiles.append(bf)
+#             if (len(matchBook) > 1):
+#                 bf.audibleMatches.extend(matchBook)
 
 def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     print (f"Building tree from Hybrid Sources:\nSource:{path}\nMedia:{mediaPath}\nLog:{logfile}\n")
@@ -92,7 +92,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     print(f"\nCategorizing books from {len(allFiles)} files, please wait...")
     for f in allFiles:
         #for each book file
-        print(f"Categorizing: {f}...\r", end="\r")
+        print(f"Categorizing: {f}\r", end="\r")
         #create a bookFile
         fullpath=os.path.join(myx_args.params.source_path, f)
         bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
@@ -200,7 +200,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
     print(f"\nCompleted processing {len(normalBooks)} books. {len(matchedFiles)}/{len(normalBooks) - len(matchedFiles)} match/unmatch ratio.", end=" ")                 
     if (len(multiBookCollections)):
-        print(f"{len(multiBookCollections)} multi-book collection skipped (future update!)")                 
+        print(f"Skipped {len(multiBookCollections)} multi-book collection (coming soon!)")                 
     
     print("\n\n")
     return
