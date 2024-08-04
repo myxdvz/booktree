@@ -246,3 +246,7 @@ def findBestMatch(targetBook, books):
 def printDivider (char="-", length=40):
     print("\n", length * char, "\n")
     
+def removeGA (author:str):
+    #remove Graphic Audio and special characters like ()[]
+    cleanAuthor = author.replace("GraphicAudio","").replace("[","").replace("]","")
+    return cleanAuthor.strip()

@@ -159,7 +159,7 @@ class BookFile:
         #parse authors
         if 'artist' in metadata: 
             for author in metadata["artist"].split(","):
-                book.authors.append(Contributor(author))
+                book.authors.append((Contributor(myx_utilities.removeGA(author))))
         #parse narrators
         if 'composer' in metadata: 
             for narrator in metadata["composer"].split(","):
@@ -429,7 +429,7 @@ class MAMBook:
             #parse authors
             if 'artist' in metadata: 
                 for author in metadata["artist"].split(","):
-                    book.authors.append(Contributor(author))
+                    book.authors.append(Contributor(myx_utilities.removeGA(author)))
             #parse narrators
             if 'composer' in metadata: 
                 for narrator in metadata["composer"].split(","):
@@ -584,8 +584,8 @@ class MAMBook:
         else:
             #if this is a multi-file book, use book name and author
             titleFilename=title
-            authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
-
+        
+        authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
         # Search using book key and authors (using or search in case the metadata is bad)
         print(f"Searching MAM for\n\ttitle or FileName:{titleFilename}\n\tauthors:{authors}")
         self.mamMatches=myx_mam.getMAMBook(session, titleFilename=titleFilename, authors=authors)
