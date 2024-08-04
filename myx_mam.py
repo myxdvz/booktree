@@ -9,7 +9,7 @@ import myx_args
 
 
 #MAM Functions
-def searchMAM(session, title, authors, filename, lang_code=None, audiobook=False, ebook=False):
+def searchMAM(session, titleFilename, authors, lang_code=None, audiobook=False, ebook=False):
     # fill in mam_id for first run
     headers = {"cookie": f"mam_id={session}"}
 
@@ -33,9 +33,10 @@ def searchMAM(session, title, authors, filename, lang_code=None, audiobook=False
             mam_categories.append(14)
         if not mam_categories:
             return None
+
         params = {
             "tor": {
-                "text": f'({authors}) "{filename}"',  # The search string.
+                "text": f'{authors} {titleFilename} @dummy mamDummy',  # The search string.
                 "srchIn": {
                     "title": "true",
                     "author": "true",
@@ -49,10 +50,11 @@ def searchMAM(session, title, authors, filename, lang_code=None, audiobook=False
         try:
             r = sess.post('https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php', json=params)
 
+            #print(r.text)
             if r.text == '{"error":"Nothing returned, out of 0"}':
                 return None
             
-            return (r.json()['total'], r.json()["data"])
+            return (r.json()["data"])
     
         except Exception as e:
             print(f'error searching MAM {e}')
@@ -63,9 +65,9 @@ def searchMAM(session, title, authors, filename, lang_code=None, audiobook=False
 
     return None
 
-def getMAMBook(session, title="", authors="", filename=""):
+def getMAMBook(session, titleFilename="", authors=""):
     books=[]
-    total, mamBook=searchMAM(session, title, authors, filename, 1, True, False)
+    mamBook=searchMAM(session, titleFilename, authors, 1, True, False)
     if (mamBook is not None):
         for b in mamBook:
             #pprint(b)

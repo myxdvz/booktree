@@ -64,30 +64,30 @@ class Book:
         #Removes (Unabdridged from the title)
         return self.title.replace (" (Unabridged)","")
     
-    def getAuthors(self, delimiter=",", encloser=""):
-        return myx_utilities.getList(self.authors, delimiter, encloser)
+    def getAuthors(self, delimiter=",", encloser="", stripaccents=True):
+        return myx_utilities.getList(self.authors, delimiter, encloser, stripaccents=True)
     
-    def getSeries(self, delimiter=",", encloser=""):
-        return myx_utilities.getList(self.series, delimiter, encloser)
+    def getSeries(self, delimiter=",", encloser="", stripaccents=True):
+        return myx_utilities.getList(self.series, delimiter, encloser, stripaccents=True)
     
-    def getNarrators(self, delimiter=",", encloser=""):
-        return myx_utilities.getList(self.narrators, delimiter, encloser) 
+    def getNarrators(self, delimiter=",", encloser="", stripaccents=True):
+        return myx_utilities.getList(self.narrators, delimiter, encloser, stripaccents=True) 
     
-    def getSeriesParts(self, delimiter=",", encloser=""):
-        return myx_utilities.getList(self.series, delimiter, encloser) 
+    def getSeriesParts(self, delimiter=",", encloser="", stripaccents=True):
+        return myx_utilities.getList(self.series, delimiter, encloser, stripaccents=True) 
 
-    def getDictionary(self, book):
-        book["matchRate"]=self.matchRate
-        book["asin"]=self.asin
-        book["title"]=self.title
-        book["subtitle"]=self.subtitle
-        book["publicationName"]=self.publicationName
-        book["length"]=self.length
-        book["duration"]=self.duration
-        book["series"]=self.getSeries()
-        book["authors"]=self.getAuthors()
-        book["narrators"]=self.getNarrators()
-        book["seriesparts"]=self.getSeriesParts()
+    def getDictionary(self, book, ns=""):
+        book[f"{ns}matchRate"]=self.matchRate
+        book[f"{ns}asin"]=self.asin
+        book[f"{ns}title"]=self.title
+        book[f"{ns}subtitle"]=self.subtitle
+        book[f"{ns}publicationName"]=self.publicationName
+        book[f"{ns}length"]=self.length
+        book[f"{ns}duration"]=self.duration
+        book[f"{ns}series"]=self.getSeries()
+        book[f"{ns}authors"]=self.getAuthors()
+        book[f"{ns}narrators"]=self.getNarrators()
+        book[f"{ns}seriesparts"]=self.getSeriesParts()
         return book  
     
     def init(self):
@@ -398,6 +398,8 @@ class MAMBook:
     isSingleFile:bool=False
     isMultiFileBook:bool=False
     isMultiBookCollection:bool=False
+    metadata:str="id3"
+    metadataBook:Book=None
 
     def ffprobe(self, file):
         #ffprobe the file
@@ -462,12 +464,17 @@ class MAMBook:
         #Search Audible using either MAM (better) or ffprobe metadata
         if (self.bestMAMMatch is not None):
             book = self.bestMAMMatch
+            title = book.getCleanTitle()
         else:
-            book = self.ffprobeBook       
+            book = self.ffprobeBook     
+            if (self.isMultiFileBook):
+                title = myx_utilities.cleanseTitle(book.getSeries())
+            else:
+                title = myx_utilities.cleanseTitle(book.title)
 
-        pprint(book)
-        title=book.getCleanTitle()
-        keywords=myx_utilities.optimizeKeys(title)
+        #pprint(book)
+        
+        keywords=title
         print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tkeywords:{keywords}\n")
         #search each author until a match is found
         for author in book.authors:
@@ -477,38 +484,51 @@ class MAMBook:
             #book found, exit for loop
             if ((books is not None) and len(books)):
                 break
+        
+        self.audibleMatches=books
+        print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
 
-        #for each matched book, calculate the fuzzymatch rate
-        mamBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
-        bestMatchRate=0
-        for product in books:
-            book=myx_audible.product2Book(product)
-            audibleBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
-            matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
-            book.matchRate=matchRate
+        if (len(self.audibleMatches) > 1):
+            #find the best match
+            #for each matched book, calculate the fuzzymatch rate
+            mamBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
+            bestMatchRate=0
+            for product in books:
+                book=myx_audible.product2Book(product)
+                audibleBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
+                matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
+                book.matchRate=matchRate
 
-            #is this better?
-            if (matchRate > bestMatchRate):
-                bestMatchRate=matchRate
-                self.bestAudibleMatch=book
+                #is this better?
+                if (matchRate > bestMatchRate):
+                    bestMatchRate=matchRate
+                    self.bestAudibleMatch=book
+        else:
+            #the only match is the best match
+            if (len(books)):
+                self.bestAudibleMatch=myx_audible.product2Book(books[0])
 
-        pprint(self.bestAudibleMatch)
-        return books
+        #pprint(self.bestAudibleMatch)
+        return len(books)
     
     def createHardLinks(self, targetFolder, dryRun=False):
-        book=None
-        #if there's an audible match, use it else mam
+        #Order of Priority: Audible, MAM, ffrobe
         if (self.bestAudibleMatch is not None):
-            book=self.bestAudibleMatch
+            self.metadataBook=self.bestAudibleMatch
+            self.metadata = "audible"
+        elif (self.bestMAMMatch is not None):
+            self.metadataBook=self.bestMAMMatch
+            self.metadata = "mam"
         else:
-            if len(self.mamMatches):
-                book=self.mamMatches[0]        
+            self.metadataBook=self.ffprobeBook
+            self.metadata = "id3"
 
-        if (book is not None):
+        if (self.metadataBook is not None):
+            print (f"Hardlinking files for {self.metadataBook.title}")
             #for each file for this book                
             for f in self.files:
                 #if a book belongs to multiple series, hardlink them to all series
-                for p in f.getTargetPaths(book):
+                for p in f.getTargetPaths(self.metadataBook):
                     if (not dryRun):
                         f.hardlinkFile(f.fullPath, os.path.join(targetFolder,p))
                     print ("Hardlinking {} to {}".format(f.fullPath, os.path.join(targetFolder,p)))
@@ -516,54 +536,60 @@ class MAMBook:
 
                 print("\n", 40 * "-", "\n")
 
+    def isMatched(self):
+        return bool(((self.bestMAMMatch is not None) or (self.bestAudibleMatch is not None)))
+    
     def getLogRecord(self, bf):
         #MAMBook fields
         book={}
-        book["book"]=self.name,
-        book["file"]=bf.fullPath,
-        book["isMatched"]= bool((len(self.mamMatches) or (self.bestAudibleMatch is not None)))
-        book["isHardLinked"]= bf.isHardlinked,
-        book["mamCount"]=len(self.mamMatches),
+        book["book"]=self.name
+        book["file"]=bf.fullPath
+        book["isMatched"]=self.isMatched() 
+        book["isHardLinked"]= bf.isHardlinked
+        book["mamCount"]=len(self.mamMatches)
         book["audibleMatchCount"]=len(self.audibleMatches)
+        book["metadatasource"]=self.metadata
+        #check out the targetpath of the first bookfile
+        book["paths"]=self.files[0].getTargetPaths(self.metadataBook)
 
-        #MAM or Audible
-        mamBook=None
+        #Get FFProbe Book
+        if (self.ffprobeBook is not None):
+            book=self.ffprobeBook.getDictionary(book, "id3-")
+
+        #Get MAM Book
+        if (self.bestMAMMatch is not None):
+            book=self.bestMAMMatch.getDictionary(book, "mam-")
+
+        #Get Audible Book
         if (self.bestAudibleMatch is not None):
-            book["metadatasource"] = "audible"
-            mamBook=self.bestAudibleMatch
-        else:
-            book["metadatasource"] = "mam"
-            if len(self.mamMatches):
-                mamBook=self.mamMatches[0]
-            else:
-                book["metadatasource"] = "id3"
-                mamBook=self.ffprobeBook
-
-        #Metadata was found
-        if (mamBook is not None):
-            # Get the rest of the metadata
-            book=mamBook.getDictionary(book)
-            book["paths"]=",".join(self.getTargetPaths(mamBook.authors, mamBook.series, mamBook.title))
+            book=self.bestAudibleMatch.getDictionary(book, "adb-")
 
         return book    
 
     def getMAMBooks(self, session, bookFile):
         #search MAM record for this book
-        title=myx_utilities.cleanseTitle(self.name)
-        authors=self.ffprobeBook.getAuthors("|", '"')
-        if (bookFile is not None):
-            filename = bookFile.getFileName()
+        title=myx_utilities.cleanseTitle(self.name, stripaccents=False)
+        authors=""
+        
+        #if this is a single or normal file, do a filename search
+        if ((not self.isMultiBookCollection) and (not self.isMultiFileBook)and (bookFile is not None)):
+            titleFilename = f'"{bookFile.getFileName()}"'
+        else:
+            #if this is a multi-file book, use book name and author
+            titleFilename=title
+            authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
 
         # Search using book key and authors (using or search in case the metadata is bad)
-        print(f"Searching MAM for\n\ttitle:{title}\n\tauthors:{authors}\n\tfilename:{filename}\n")
-        self.mamMatches=myx_mam.getMAMBook(session, title=title, authors=authors, filename=filename) 
-        print(f"Found {len(self.mamMatches)} MAM matche(s)\n\n")
+        print(f"Searching MAM for\n\ttitle or FileName:{titleFilename}\n\tauthors:{authors}\n")
+        self.mamMatches=myx_mam.getMAMBook(session, titleFilename=titleFilename, authors=authors)
+        print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
         
         #find the best match
         if (len(self.mamMatches) > 1):
             self.bestMAMMatch=myx_utilities.findBestMatch(self.ffprobeBook, self.mamMatches)
         else:
-            self.bestMAMMatch=self.mamMatches[0]
+            if (len(self.mamMatches)):
+                self.bestMAMMatch=self.mamMatches[0]
 
         return len(self.mamMatches)
 

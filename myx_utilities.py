@@ -18,11 +18,14 @@ def probe_file(filename):
     return json.loads(out)
 
 #Utilities
-def getList(items, delimiter=",", encloser=""):
+def getList(items, delimiter=",", encloser="", stripaccents=True):
     enclosedItems=[]
     for item in items:
-        enclosedItems.append("{}{}{}".format(encloser, strip_accents(item.name), encloser))
-
+        if strip_accents:
+            enclosedItems.append("{}{}{}".format(encloser, strip_accents(item.name), encloser))
+        else:
+            enclosedItems.append("{}{}{}".format(encloser, item.name, encloser))
+        
     return delimiter.join(enclosedItems)
 
 def cleanseAuthor(author):
@@ -37,9 +40,13 @@ def cleanseAuthor(author):
     stdAuthor=" ".join(stdAuthor.replace("."," ").split())
     return stdAuthor
 
-def cleanseTitle(title=""):
+def cleanseTitle(title="", stripaccents=True):
     #remove (Unabridged) and strip accents
-    stdTitle = strip_accents(title.replace(" (Unabridged)", "").replace("m4b",""))
+    if stripaccents:
+        stdTitle = strip_accents(title.replace(" (Unabridged)", "").replace("m4b",""))
+    else:
+        stdTitle = title.replace(" (Unabridged)", "").replace("m4b","")
+        
 
     return stdTitle
 
@@ -149,13 +156,13 @@ def logBookRecords(logFilePath, bookFiles):
         except csv.Error as e:
             print("file {}: {}".format(logFilePath, e))
 
-def logBooks(logFilePath, book):
+def logBooks(logFilePath, books):
     write_headers = not os.path.exists(logFilePath)
     with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
         try:
-            for key in book.keys():
-                for file in book[key].files:
-                    row=book[key].getLogRecord(file)
+            for book in books:
+                for file in book.files:
+                    row=book.getLogRecord(file)
                     fields=row.keys()
 
                     #create a writer

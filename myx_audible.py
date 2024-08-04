@@ -50,9 +50,9 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
             path=f"catalog/products",
             params={
                 "asin": asin,
-                "title": title.replace(" (Unabridged)",""),
-                "author": myx_utilities.strip_accents(authors),
-                "narrator": myx_utilities.strip_accents(narrators),
+                "title": title,
+                "author":authors,
+                "narrator": narrators,
                 "keywords": keywords,
                 "response_groups": (
                     "sku, series, product_attrs, relationships, contributors,"
@@ -65,7 +65,6 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
             if (book["language"] == "english"):
                 enBooks.append(book)
 
-        print("Found ", len(enBooks), " books")
         return enBooks
     except Exception as e:
         print(e)
@@ -131,8 +130,10 @@ def product2Book(product):
                 #if this relationship is a series
                 if (relationship["relationship_type"] == "series"):
                     book.series.append(myx_classes.Series(relationship["title"], relationship["sequence"]))
+        
         if myx_args.params.verbose:
             pprint (book)
+            
         return book
     else:
         return None

@@ -125,7 +125,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
                 multiBookCollections.append(book)
                 print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
 
-                if myx_args.parms.verbose:
+                if myx_args.params.verbose:
                     for b in newBooks:
                         print(b.name)
                         for f in b.files:
@@ -152,11 +152,11 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
         if (not book[b].isMultiBookCollection):
             if (book[b].isSingleFile):
                 #this is a single file or a book folder with multiple files, process them the same way
-                print (f"{book[b].name} is a single file book")
+                print (f"{book[b].name} is a single file book\n")
 
             if (book[b].isMultiFileBook):
                 #this is a book with multiple files under the folder
-                print (f"{book[b].name} is a multi-file book")
+                print (f"{book[b].name} is a multi-file book\n")
 
             #Process these two the same way, essentially based on the first book in the file list
             bf = book[b].files[0]
@@ -169,6 +169,8 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
 
+            matchedFiles.append(book[b])
+
             #pprint(book[b])
             if myx_args.params.verbose:
                 print("Book: {}\nfiles: {}\nmamCount: {}\naudibleCount: {}".format(book[b].name, len(book[b].files), len(book[b].mamMatches), len(book[b].audibleMatches)))
@@ -179,12 +181,11 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     myx_audible.audibleDisconnect(auth)
 
     #Create Hardlinks
-    print ("Hardlinking files")
-    for b in book.keys():
-        book[b].createHardLinks(mediaPath,dryRun)
+    for mb in matchedFiles:
+        mb.createHardLinks(mediaPath,dryRun)
 
-    #Logging
-    myx_utilities.logBooks(logfile, book)  
+    #Logging processed files
+    myx_utilities.logBooks(logfile, matchedFiles)  
 
     return
 
@@ -229,23 +230,23 @@ def main():
             case _:
                 print ("This feature is coming soon! Right now, only audible and mam are supported")
     
-        #for files with matches, hardlink them
-        if (len(matchedFiles)):
-            print ("Creating hard links for matched files...")
-            myx_utilities.createHardLinks(matchedFiles, mediaPath, False)
+        # #for files with matches, hardlink them
+        # if (len(matchedFiles)):
+        #     print ("Creating hard links for matched files...")
+        #     myx_utilities.createHardLinks(matchedFiles, mediaPath, False)
 
-            #log matched files
-            print ("Logging matched books...")
-            myx_utilities.logBookRecords(logfile, matchedFiles)
+        #     #log matched files
+        #     print ("Logging matched books...")
+        #     myx_utilities.logBookRecords(logfile, matchedFiles)
 
-        if (len(unmatchedFiles)):
-        #for files with matches, hardlink them
-            print ("Creating hard links for unmatched files...")
-            myx_utilities.createHardLinks(unmatchedFiles, mediaPath, False)
+        # if (len(unmatchedFiles)):
+        # #for files with matches, hardlink them
+        #     print ("Creating hard links for unmatched files...")
+        #     myx_utilities.createHardLinks(unmatchedFiles, mediaPath, False)
 
-            #log unmatched files
-            print ("Logging unmatched books...")
-            myx_utilities.logBookRecords(logfile, unmatchedFiles)  
+        #     #log unmatched files
+        #     print ("Logging unmatched books...")
+        #     myx_utilities.logBookRecords(logfile, unmatchedFiles)  
 
         #Completed
         print(f"Completed processing {len(allFiles)} files. {len(matchedFiles)}/{len(unmatchedFiles)} match/unmatch ratio.")                 
