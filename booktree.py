@@ -54,7 +54,7 @@ def buildTreeFromData(path, mediaPath, logfile, dryRun=False):
             print("\n", 40 * "-", "\n")
 
         # deregister device when done
-        myx_audible.audibleConnect(auth)
+        myx_audible.audibleDisconnect(auth)
 
     else:
         #Pattern yielded no files
@@ -69,7 +69,7 @@ def buildTreeFromMAM (path, mediaPath, logfile, dryRun=False):
         bf.ffprobe()
 
         #search MAM by filename
-        matchBook=myx_mam.getMAMBook(myx_args.params.session, bf.ffprobeBook.title, bf.probeBook.getAuthors(), os.path.basename(f))
+        matchBook=myx_mam.getMAMBook(myx_args.params.session, os.path.basename(fullpath), bf.ffprobeBook.getAuthors())
         #pprint(matchBook)
         if (len(matchBook)==1):
             #Exact Match
