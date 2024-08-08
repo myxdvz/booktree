@@ -455,7 +455,7 @@ class MAMBook:
         #Does this book belong in a series?
         if (len(series) > 0):
             for s in series:
-                paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, s.getSeriesPart(), title))
+                paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, myx_utilities.cleanseSeries(s.getSeriesPart()), title))
         else:
             paths.append("{}/{}/".format(stdAuthor, title))   
         return paths  
@@ -534,10 +534,10 @@ class MAMBook:
                 #if a book belongs to multiple series, hardlink them to all series
                 for p in f.getTargetPaths(self.metadataBook):
                     if (not dryRun):
-                        f.hardlinkFile(f.fullPath, os.path.join(targetFolder,p))
+                        f.hardlinkFile(f.fullPath, os.path.join(targetFolder, myx_utilities.cleanseSeries(p)))
                     
                     if myx_args.params.verbose:
-                        print (f"Hardlinking {f.fullPath} to {os.path.join(targetFolder,p)}")
+                        print (f"Hardlinking {f.fullPath} to {os.path.join(targetFolder,myx_utilities.cleanseSeries(p))}")
                 f.isHardLinked=True
                 
                 if myx_args.params.verbose:
@@ -560,8 +560,8 @@ class MAMBook:
         book["paths"]=self.files[0].getTargetPaths(self.metadataBook)
 
         #Get FFProbe Book
-        if (self.ffprobeBook is not None):
-            book=self.ffprobeBook.getDictionary(book, "id3-")
+        if (bf.ffprobeBook is not None):
+            book=bf.ffprobeBook.getDictionary(book, "id3-")
 
         #Get MAM Book
         if (self.bestMAMMatch is not None):

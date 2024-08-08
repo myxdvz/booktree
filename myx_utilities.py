@@ -250,3 +250,8 @@ def removeGA (author:str):
     #remove Graphic Audio and special characters like ()[]
     cleanAuthor = author.replace("GraphicAudio","").replace("[","").replace("]","")
     return cleanAuthor.strip()
+
+def cleanseSeries(series):
+    #remove colons
+    cleanSeries = series.replace(":", "")
+    return cleanSeries.strip()
