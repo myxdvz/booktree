@@ -19,14 +19,14 @@ def importArgs():
     #dry-run
     parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
     #medata source (audible|id3|log)
-    parser.add_argument("metadata", choices=["audible","mam","mam-audible"], default="mam-audible", help="Source of the metada: (audible, mam, mam-audible)")
+    parser.add_argument("metadata", choices=["audible","mam","mam-audible","log"], default="mam-audible", help="Source of the metada: (audible, mam, mam-audible)")
     #if medata source=audible, you need to provide your username and password
     parser.add_argument("-auth", choices=["login","browser"], default="login", help="When you get the CFA prompts, switch to browser mode")
     parser.add_argument("-user", help="Your audible username", required=True)
     parser.add_argument("-pwd", help="Your audible password", required=True)
     parser.add_argument("--session", default="", help="Your session cookie")
     parser.add_argument("-match", type=int, default=35, help="The min acceptable ratio for the fuzzymatching algorithm. Defaults to 35")
-    parser.add_argument("-log", help="The file path/name to be used as metadata input")
+    parser.add_argument("--input", help="The file path/name to be used as metadata input")
     #verbose
     parser.add_argument("--verbose", default=False, action="store_true", help="Level of prints on the screen")
 

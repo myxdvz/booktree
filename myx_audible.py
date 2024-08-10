@@ -50,12 +50,17 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
     
     enBooks=[]
     try:
-        books = client.get (
-            path=f"catalog/products",
+        if len(asin) : 
+            p=f"catalog/products/{asin}"
+        else:
+            p=f"catalog/products"
+
+        books=client.get (
+            path=p,
             params={
                 "asin": asin,
                 "title": title,
-                "author":authors,
+                "author": authors,
                 "narrator": narrators,
                 "keywords": keywords,
                 "response_groups": (
@@ -64,14 +69,19 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
                 )
             },
         )
-        for book in books["products"]:
-            #ignore non-english books
-            if (book["language"] == "english"):
-                enBooks.append(book)
+
+        #check for ["product"] or ["products"]
+        if "product" in books.keys():
+            enBooks.append(books["product"])
+        elif "products" in books.keys():
+            for book in books["products"]:
+                #ignore non-english books
+                if (book["language"] == "english"):
+                    enBooks.append(book)
 
         return enBooks
     except Exception as e:
-        print(e)
+        print(f"Error searching audible: {e}")
 
 def getBookByAsin(client, asin):
     print ("getBookByASIN: ", asin)
@@ -118,22 +128,22 @@ def product2Book(product):
     #product is an Audible product json
     if product is not None:
         book=myx_classes.Book()
-        if 'asin' in product: book.asin=product["asin"]
-        if 'title' in product: book.title=product["title"]
-        if 'subtitle' in product: book.subtitle=product["subtitle"]
+        if 'asin' in product: book.asin=str(product["asin"])
+        if 'title' in product: book.title=str(product["title"])
+        if 'subtitle' in product: book.subtitle=str(product["subtitle"])
         if 'runtime_length_min' in product: book.length=product["runtime_length_min"]
         if 'authors' in product: 
             for author in product["authors"]:
-                book.authors.append(myx_classes.Contributor(author["name"]))
+                book.authors.append(myx_classes.Contributor(str(author["name"])))
         if 'narrators' in product: 
             for narrator in product["narrators"]:
-                book.narrators.append(myx_classes.Contributor(narrator["name"]))
-        if 'publication_name' in product: book.publicationName=product["publication_name"]
+                book.narrators.append(myx_classes.Contributor(str(narrator["name"])))
+        if 'publication_name' in product: book.publicationName=str(product["publication_name"])
         if 'relationships' in product: 
             for relationship in product["relationships"]:
                 #if this relationship is a series
-                if (relationship["relationship_type"] == "series"):
-                    book.series.append(myx_classes.Series(relationship["title"], relationship["sequence"]))
+                if (str(relationship["relationship_type"]) == "series"):
+                    book.series.append(myx_classes.Series(str(relationship["title"]), str(relationship["sequence"])))
         
         if myx_args.params.verbose:
             pprint (book)

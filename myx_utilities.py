@@ -40,13 +40,15 @@ def cleanseAuthor(author):
     stdAuthor=" ".join(stdAuthor.replace("."," ").split())
     return stdAuthor
 
-def cleanseTitle(title="", stripaccents=True):
+def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     #remove (Unabridged) and strip accents
+    stdTitle=title
+
+    if stripUnabridged:
+        stdTitle = stdTitle.replace(" (Unabridged)", "").replace("m4b","")
+    
     if stripaccents:
-        stdTitle = strip_accents(title.replace(" (Unabridged)", "").replace("m4b",""))
-    else:
-        stdTitle = title.replace(" (Unabridged)", "").replace("m4b","")
-        
+        stdTitle = strip_accents(stdTitle)
 
     return stdTitle
 
@@ -82,18 +84,18 @@ def optimizeKeys(keywords, delim=" "):
     kw=[]
     for k in keywords:
         k=k.replace("["," ").replace("]"," ").replace("{"," ").replace("}"," ").replace(".", " ").replace("_", " ").replace("("," ").replace(")"," ").replace(":"," ").replace(","," ").replace(";", " ")
-        print(k)
+        #print(k)
         #parse this item "-"
         for i in k.split("-"):
             #parse again on spaces
-            print(i)
+            #print(i)
             for j in i.split():
-                print(j)
+                #print(j)
                 #if it's numeric like 02, make it an actual digit
                 if (not j.isdigit()):
                     #remove any articles like a, i, the
                     if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks"])):
-                        print(f"Adding {j.lower()}")
+                        #print(f"Adding {j.lower()}")
                         kw.append(j.lower())
 
     #now return comma delimited string
@@ -101,6 +103,7 @@ def optimizeKeys(keywords, delim=" "):
 
 def getParentFolder(file, source):
     #We normally assume that the file is in a folder, but some files are NOT in a subfolder
+    # relPath = os.path.relpath(file, source).split("/")
     parent=os.path.dirname(file)
     #check if the parent folder matches the source folder
     if (parent == source):
@@ -160,10 +163,10 @@ def logBooks(logFilePath, books):
     write_headers = not os.path.exists(logFilePath)
     with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
         try:
+            fields=getLogHeaders()
             for book in books:
                 for file in book.files:
                     row=book.getLogRecord(file)
-                    fields=row.keys()
 
                     #create a writer
                     writer = csv.DictWriter(csv_file, fieldnames=fields)
@@ -210,6 +213,13 @@ def findBookFiles (baseFileList, filegrouping):
 
     return findBookFiles(updatedFileList, filegrouping)
 
+def isCollection (bookFile):
+    #we assume that most books are formatted this way /Book/Files.m4b
+    #we assume that this is a collection, if the file is 3 levels deep, /Book/Another Book or CD/Files.m4b
+
+    relPath = os.path.relpath(bookFile, myx_args.params.source_path).split("/")
+    return (len(relPath) > 2)
+
 def isMultiBookCollection (mamBook):
     if myx_args.params.verbose:
         print (f"Checking {mamBook.name} file {range(len(mamBook.files))} files")
@@ -255,3 +265,23 @@ def cleanseSeries(series):
     #remove colons
     cleanSeries = series.replace(":", "")
     return cleanSeries.strip()
+
+
+def readLog(logFilePath, books):
+    if os.path.exists(logFilePath):
+        with open(logFilePath, newline="", errors='ignore', encoding='utf-8',) as csv_file:
+            try:
+                reader = csv.reader(csv_file,)
+                for row in reader:
+                    ##Create a new Book
+                    print(row)
+                    print(reader.fieldnames)
+
+            except csv.Error as e:
+                print("file {}: {}".format(logFilePath, e))    
+
+
+def getLogHeaders():
+    headers=['book', 'file', 'isMatched', 'isHardLinked', 'mamCount', 'audibleMatchCount', 'metadatasource', 'paths', 'id3-matchRate', 'id3-asin', 'id3-title', 'id3-subtitle', 'id3-publicationName', 'id3-length', 'id3-duration', 'id3-series', 'id3-authors', 'id3-narrators', 'id3-seriesparts', 'mam-matchRate', 'mam-asin', 'mam-title', 'mam-subtitle', 'mam-publicationName', 'mam-length', 'mam-duration', 'mam-series', 'mam-authors', 'mam-narrators', 'mam-seriesparts', 'adb-matchRate', 'adb-asin', 'adb-title', 'adb-subtitle', 'adb-publicationName', 'adb-length', 'adb-duration', 'adb-series', 'adb-authors', 'adb-narrators', 'adb-seriesparts']
+                    
+    return dict.fromkeys(headers)
