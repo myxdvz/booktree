@@ -1,5 +1,5 @@
 # booktree
-Reorganize your audiobooks using ID3 and/or Audbile metadata. The originals are untouched and will be hardlinked to their destination
+Reorganize your audiobooks using ID3, MAM or Audible metadata into a tree structure recommended and supported by media servers like Audibookshelf. The originals are untouched and will be hardlinked to their destination
 
 It does the following:
 - take a source folder, ideally your downloads folder where your audiobook files are
@@ -11,9 +11,38 @@ It does the following:
 
 **booktree** builds the following heirarchy on the target folder:
 * <media_path>/Author/Title (If there is no series information)
-* <media_path>/Author/Series/SeriesPart - Title
+* <media_path>/Author/Series/Series #Part - Title
 
 ## Usage:
+
+### Recommended Workflow
+
+1. Start small (pick a folder that has a handful of books, don't run it on 2K files the first try :) )
+2. Run <mark>booktree</mark> in <mark>--dry-run</mark> mode
+3. Check the resulting log file to check the matches.  What you should check for:
+    * Rows where isMatched = TRUE
+      * Anywhere mamCount = 1 is an exact match... celebrate!
+      * Check for rows where mamCount or audibleMatchCount is high (>3), if it is, just check if it picked the right match
+    * Rows where isMatched = FALSE - there are many reasons why there won't be a match
+      *  The book is NOT SOLD on Audible at all (or in your region)
+      *  The book/torrent has been deleted from MAM since you snatched it
+      *  The ID3 metadata is empty or bad, e.g., Author/Narrator that's not comma delimited, bad title and series information
+4.  If everything looks good, rerun booktree without the --dry-run parameter
+5.  Recategorize/Set Location (in you client, e.g., Qbit), to where you have your "processed" files so the script won't have to go thru them again next time
+
+  Optionally, you can choose to work on the log file (removing all the rows that matched and already processed), and feed that as input to booktree in a succeeding run:
+
+1. Fix the ID3 metadata in the log file (easier to do that in the log file as you can't touch the file). The areas to focus on are:
+    *  id3-asin
+    *  id3-title
+    *  id3-author
+    *  id3-series
+2. Fixing those four fields will increase your match rate
+3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log --inputFile <updatedlogfile.csv> [the rest of the args]
+
+  If there really is no match (metadata=id3), and you still want to organize the book from the updated id3 information, update the metadasource column to "as-is" and it will take the data from the log and not query MAM or Audible
+
+### Help and Examples
 ~~~
 usage: python booktree.py [-h] {mam|audible|mam-audible} [-user USER] [-pwd PWD] [--file FILE] --source_path SOURCE_PATH --media_path MEDIA_PATH [--log_path LOG_PATH] [--dry-run] [--verbose] [--session]
 ~~~
@@ -21,10 +50,11 @@ usage: python booktree.py [-h] {mam|audible|mam-audible} [-user USER] [-pwd PWD]
 | Flag | Description | Default Value |
 | ----------- | ----------- | ----------- |
 |  -h, --help |           Show this help message and exit||
-|  {audible,mam,mam-audible} | Source of the metada: (audible,log)|mam-audible|
+|  {audible,mam,mam-audible,log} | Source of the metada: (mam, audible,log)|mam-audible|
 |  -user USER            |Your audible username|Required for audible|
 |  -pwd PWD              |Your audible password|Required for audible|
-|  --file FILE            |The file or files(s) you want to process.  Accepts * and ?|\*.m4b|
+|  --input FILE           |if source of metadata is log, path to the log file.||
+|  --file FILE            |For directory scan, the file(s) path/pattern you want to process.  Accepts * and ?|\*.m4b|
 |  --source_path SOURCE_PATH|Where your unorganized files are|Required|
 |  --media_path MEDIA_PATH|Where your organized files will be, i.e. your Audiobookshelf library|Required|
 |  --log_path LOG_PATH   |Where your log files will be|<booktree>/logs|
@@ -32,9 +62,8 @@ usage: python booktree.py [-h] {mam|audible|mam-audible} [-user USER] [-pwd PWD]
 |  --verbose            |If provided, will display more debug information||
 |  --session | If using mam or mam-audible, include the MAM session ID||
 
-Note that using the log as the metadata source is still under development.  The intention is to allow a user to run the script using audible as metadata source in dry-run mode first to generate the log file and then in succeeding runs, use the log file as the input. This will allow the user to make edits and corrections in the log file to provide or correct any missing metadata before actually organizing the files.
 
-## Examples and Use Cases
+### Examples and Use Cases
 
 #### Use Case #1: Minimum usage required - Process all m4b files under current folder to /data/media/abs.
 ~~~
@@ -67,25 +96,27 @@ $ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /
 ~~~
 
 ## FAQ
-**Q:  What if there are no id3 tags at all?**
-<p>A: Parent folder information is used to perform keyword search</p>
+**Q:  My files are not from MAM, can I still use this tool?**
+<p>A: Use audible as metadata source, i.e., booktree.py audible</p>
 
-**Q:  What if there's no author/artist tag?**
-<p>A: If audible metadata can be pulled, it will use audible author information.  Otherwise, author is set to "Unknown"</p>
-
-**Q:  What if the audible search returns multiple matches?**
-<p>A: Fuzzymatch is used to get the best match that is on or above the minimum acceptable match rate provided, default is 35</p>
-
-**Q:  My match rates are bad, how can I improve it?**
-<p>A: Play around with the match rate parameter, specially if the source files have very little metadata available</p>
+**Q:  What if the mam or audible search returns multiple matches?**
+<p>A: Fuzzymatch is used to get the best match</p>
 
 ## Dependencies
+* Python >= 3.10
 * ffmpeg
 * audible
 * thefuzz 
 
 run pip install -r requirements.txt to install dependencies
 
-Note that hardlinks only work if the source and target directories are in the SAME volume
+## Disclaimers
+
+* While I have tested this on over 30K files and over 4K audiobooks, I have NOT tested this on Windows, some of the / should probably be \
+* It should work seamlessly on recent MAM books : single file or multi-file book under a single book folder
+* The script may not immediately work on older, Multibook collections immediately -- I suggest editing the log and update the book and id-3 title columns and rerun in log mode
+* The script may not immediately work on Multi-CD books -- I suggest editing the log and update the book and id-3 title columns and rerun in log mode
+* Hard linking will only work if the source and target paths are on the same volume
+
 
 
