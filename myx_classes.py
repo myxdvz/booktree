@@ -5,6 +5,7 @@ import os, sys, subprocess, shlex, re
 from pprint import pprint
 import json
 import posixpath
+import math
 import myx_utilities
 import myx_audible
 import myx_args
@@ -40,7 +41,7 @@ class Book:
     subtitle:str=""
     publicationName:str=""
     length:int=0
-    duration:str=""
+    duration:float=0
     matchRate=0
     series:list[Series]= field(default_factory=list)
     authors:list[Contributor]= field(default_factory=list)
@@ -163,15 +164,19 @@ class BookFile:
         
     def __probe_file(self):
         #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
-        cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', self.fullPath]
+        cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags:format=duration', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', self.fullPath]
         p = subprocess.Popen(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err =  p.communicate()
+        #pprint(json.loads(out))
         return json.loads(out)
     
     def ffprobe(self):
         #ffprobe the file
+        duration=0
         try:
-            metadata=self.__probe_file()["format"]["tags"]
+            r = self.__probe_file()
+            duration = float(r["format"]["duration"])
+            metadata= r["format"]["tags"]
         except Exception as e:
             metadata=dict()
             if myx_args.params.verbose:
@@ -197,6 +202,9 @@ class BookFile:
         if 'composer' in metadata: 
             for narrator in metadata["composer"].split(","):
                 book.narrators.append(Contributor(narrator))
+        #duration in minutes
+        book.duration = duration
+        
         #return a book object created from  ffprobe
         self.ffprobeBook=book
         if verbose:
@@ -435,6 +443,14 @@ class MAMBook:
     metadata:str="id3"
     metadataBook:Book=None
 
+    def getRunTimeLength(self):
+        #add all the duration of the files in the book, and convert into minutes
+        duration:float=0
+        for f in self.files:
+            duration += f.ffprobeBook.duration
+
+        return math.floor(duration/60)
+
     def ffprobe(self, file):
         #ffprobe the file
         metadata=None
@@ -488,9 +504,16 @@ class MAMBook:
         #Does this book belong in a series?
         if (len(series) > 0):
             for s in series:
-                paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, myx_utilities.cleanseSeries(s.getSeriesPart()), title))
+                cs = myx_utilities.cleanseSeries(s.getSeriesPart())
+                if len(cs):
+                    cs += f" - {title}"
+                else:
+                    cs = title
+                os.path.join(stdAuthor, s.name, cs)
+                paths.append(os.path.join(stdAuthor, s.name, cs))
         else:
-            paths.append("{}/{}/".format(stdAuthor, title))   
+            
+            paths.append(os.path.join(stdAuthor, title))   
         return paths  
 
     def getAudibleBooks(self, client):
@@ -503,13 +526,14 @@ class MAMBook:
         else:
             book = self.ffprobeBook     
             if (self.isMultiFileBook):
-                title = myx_utilities.cleanseTitle(book.getSeries())
+                title = myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)
             else:
-                title = myx_utilities.cleanseTitle(book.title)
+                title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
         #pprint(book)
         
-        keywords=myx_utilities.optimizeKeys([title, book.getSeries()])
+        keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+                                             myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)])
         print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tkeywords:{keywords}")
         #search each author until a match is found
         for author in book.authors:
@@ -532,9 +556,18 @@ class MAMBook:
                 bestMatchRate=0
                 for product in books:
                     book=myx_audible.product2Book(product)
-                    audibleBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
-                    matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
-                    book.matchRate=matchRate
+
+                    #if duration is an exact match, assume it is the book
+                    if (self.getRunTimeLength() == book.length):
+                        print (f"Found exact duration match {pprint(book)}")
+                        self.bestAudibleMatch=book
+                        book.matchRate=100
+                        break
+                    else:
+                        print (f"Fuzzy Match {pprint(book)}")
+                        audibleBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
+                        matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
+                        book.matchRate=matchRate
 
                     #is this better?
                     if (matchRate > bestMatchRate):

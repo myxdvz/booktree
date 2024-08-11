@@ -12,9 +12,10 @@ import myx_args
 ##ffprobe
 def probe_file(filename):
     #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
-    cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', filename]
+    cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags:format=duration', '-show_format', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', self.fullPath]
     p = subprocess.Popen(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err =  p.communicate()
+    print(json.loads(out))
     return json.loads(out)
 
 #Utilities
@@ -63,7 +64,7 @@ def standardizeAuthors(mediaPath, dryRun=False):
                 print("Renaming: {} >> {}".format(f, os.path.join(os.path.dirname(f), newAuthor)))
                 if (not dryRun):
                     try:
-                        Path(f).rename(os.path.join(os.path.dirname(f), newAuthor))
+                        os.path(f).rename(os.path.join(os.path.dirname(f), newAuthor))
                     except Exception as e:
                         print ("Can't rename {}: {}".format(f, e))
 

@@ -189,24 +189,24 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     for b in book.keys():
         #if this is a multifile book
         if len(book[b].files) > 1:
-            newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
-            if (isMultiBookCollection):
-                book[b].isMultiBookCollection=True
-                multiBookCollections.append(book)
-                if myx_args.params.verbose:
-                    print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
+            # newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
+            # if (isMultiBookCollection):
+            #     book[b].isMultiBookCollection=True
+            #     multiBookCollections.append(book)
+            #     if myx_args.params.verbose:
+            #         print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
 
-                if myx_args.params.verbose:
-                    for b in newBooks:
-                        print(b.name)
-                        for f in b.files:
-                            print (f.file)
-                    #pprint (newBooks)
-            else:
-                book[b].isMultiFileBook=True
-                multiFileCollections.append(book)
-                if myx_args.params.verbose:
-                    print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
+            #     if myx_args.params.verbose:
+            #         for b in newBooks:
+            #             print(b.name)
+            #             for f in b.files:
+            #                 print (f.file)
+            #         #pprint (newBooks)
+            # else:
+            book[b].isMultiFileBook=True
+            multiFileCollections.append(book)
+            if myx_args.params.verbose:
+                print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
         else:
             #single file books
             if myx_args.params.verbose:
@@ -314,6 +314,7 @@ if __name__ == "__main__":
 
     #start the program
     main()
+
 
  
 
