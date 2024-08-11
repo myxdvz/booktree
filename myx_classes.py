@@ -149,6 +149,9 @@ class BookFile:
     #audibleMatches:dict=field(default_factory=dict)
     audibleMatches:list[Book]= field(default_factory=list)
 
+    def getExtension(self):
+        return os.path.splitext(self.file)[1].replace(".","")
+
     def hasNoParentFolder(self):
         return (len(self.getParentFolder())==0)
     
@@ -606,41 +609,41 @@ class MAMBook:
 
         return book    
 
-    def getMAMBooks(self, session, bookFile):
+    def getMAMBooks(self, session, bookFile:BookFile):
         #search MAM record for this book
-        title=myx_utilities.cleanseTitle(bookFile.ffprobeBook.title, stripaccents=False, stripUnabridged=False)
-        authors=""
+        title=" | ".join([f'"{myx_utilities.cleanseTitle(self.name, stripaccents=False, stripUnabridged=False)}"', 
+                          f'"{myx_utilities.cleanseTitle(bookFile.ffprobeBook.title, stripaccents=False, stripUnabridged=False)}"',
+                          f'"{bookFile.getFileName()}"'])
+        authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
+        extension = f'"{bookFile.getExtension()}"'
         
         #if this is a single or normal file, do a filename search
-        if (not self.isMultiBookCollection):
-            titleFilename = f'"{bookFile.getFileName()}"'
-            if (myx_args.params.metadata == "log"):
-                #user must have cleaned the id3 tags, use that instead of the book.name
-                titleFilename.join(f" {bookFile.ffprobeBook.title}")
-        else:
-            #if this is a multi-file book, use book name and author
-            titleFilename=title
-
-        #use title and author
-        authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
-
+        # if (not self.isMultiBookCollection):
+        #     titleFilename = f'"{bookFile.getFileName()}"'
+        #     if (myx_args.params.metadata == "log"):
+        #         #user must have cleaned the id3 tags, use that instead of the book.name
+        #         titleFilename.join(f" {bookFile.ffprobeBook.title}")
+        # else:
+        #     #if this is a multi-file book, use book name and author
+        #     titleFilename=title
+     
         # Search using book key and authors (using or search in case the metadata is bad)
-        print(f"Searching MAM for\n\tTitleFilename: {titleFilename}\n\tauthors:{authors}")
-        self.mamMatches=myx_mam.getMAMBook(session, titleFilename=titleFilename, authors=authors)
+        print(f"Searching MAM for\n\tTitleFilename: {title}\n\tauthors:{authors}")
+        self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension)
 
         # was the author inaccurate? (Maybe it was LastName, FirstName or accented)
         # print (f"Trying again because Filename, Author = {len(self.mamMatches)}")
         if len(self.mamMatches) == 0:
             #try again, without author this time
-            print(f"Widening MAM search using just\n\tTitleFilename: {titleFilename}")
-            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=titleFilename)
+            print(f"Widening MAM search using just\n\tTitleFilename: {title}")
+            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, extension=extension)
 
-        # print (f"Trying again because Filename = {len(self.mamMatches)}")
-        if len(self.mamMatches) == 0:
-            #try again, with the parent folder and author
-            titleFilename = title 
-            print(f"Widening MAM search using\n\tTitle: {titleFilename}\n\tAuthors: {authors}")
-            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=titleFilename, authors=authors)
+        # # print (f"Trying again because Filename = {len(self.mamMatches)}")
+        # if len(self.mamMatches) == 0:
+        #     #try again, with the parent folder and author
+        #     titleFilename = title 
+        #     print(f"Widening MAM search using\n\tTitle: {title}\n\tAuthors: {authors}")
+        #     self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension)
 
         if myx_args.params.verbose:
             print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")

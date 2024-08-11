@@ -1,4 +1,3 @@
-import audible
 import os, sys, subprocess, shlex, re
 from subprocess import call
 from pprint import pprint
@@ -7,43 +6,6 @@ import myx_utilities
 import myx_classes
 import myx_args
 
-#MyAudible Functions
-def audibleConnect(authMode, authFile, locale="us"):
-    if myx_args.params.verbose:
-        print (f"Authenticating via {authMode} : locale = {locale}, authfile = {authFile}...")
-
-    match authMode:
-        case "browser": 
-            auth = audible.Authenticator.from_login_external(locale)
-        case "file":
-            auth = authenticateByFile(authFile)
-        case _:
-            auth = authenticateByLogin(authFile, myx_args.params.user, myx_args.params.pwd)
-    client = audible.Client(auth)   
-
-    return auth, client 
-
-def audibleDisconnect(auth):
-    # deregister device when done
-    auth.deregister_device()
-
-def authenticateByFile(authFilename):
-    auth = audible.Authenticator.from_file(authFilename)
-    return auth
-
-def authenticateByLogin(authFilename, username, password):
-    auth = audible.Authenticator.from_login(username, password, locale="us")
-
-    # store credentials to file
-    auth.to_file(filename=authFilename, encryption="json", password=password)
-
-    # save again
-    auth.to_file()
-
-    # load credentials from file
-    auth = audible.Authenticator.from_file(filename=authFilename, password=password)
-    return auth
-
 def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords=""):
     if myx_args.params.verbose:
         print (f"getAudibleBook\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
@@ -51,12 +13,12 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
     enBooks=[]
     try:
         if len(asin) : 
-            p=f"catalog/products/{asin}"
+            p=f"https://api.audible.com/1.0/catalog/products/{asin}"
         else:
-            p=f"catalog/products"
+            p=f"https://api.audible.com/1.0/catalog/products"
 
-        books=client.get (
-            path=p,
+        r = client.get (
+            p,
             params={
                 "asin": asin,
                 "title": title,
@@ -64,12 +26,15 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
                 "narrator": narrators,
                 "keywords": keywords,
                 "response_groups": (
-                    "sku, series, product_attrs, relationships, contributors,"
-                    "product_extended_attrs, product_desc, product_plan_details"
+                    "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
                 )
             },
         )
 
+        r.raise_for_status()
+        books = r.json()
+        #pprint(books)
+    
         #check for ["product"] or ["products"]
         if "product" in books.keys():
             enBooks.append(books["product"])
@@ -86,16 +51,18 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
 def getBookByAsin(client, asin):
     print ("getBookByASIN: ", asin)
     try:
-        book = client.get (
-            path=f"catalog/products/{asin}",
+        r = client.get (
+            f"https://api.audible.com/1.0/catalog/products/{asin}",
             params={
                 "response_groups": (
-                    "sku, series, product_attrs, relationships, contributors,"
-                    "product_extended_attrs, product_desc, product_plan_details"
+                    "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
                 )
             },
         )
-        return book["product"]
+        
+        r.raise_for_status()
+        return r.json()["product"]
+    
     except Exception as e:
         print(e)
 
@@ -103,17 +70,21 @@ def getBookByAuthorTitle(client, author, title):
     print ("getBookByAuthorTitle: ", author, ", ", title)
     enBooks=[]
     try:
-        books = client.get (
-            path=f"catalog/products",
+        r = client.get (
+            f"https://api.audible.com/1.0/catalog/products",
             params={
                 "author": myx_utilities.strip_accents(author),
                 "title": title,
                 "response_groups": (
-                    "sku, series, product_attrs, relationships, contributors,"
-                    "product_extended_attrs, product_desc, product_plan_details"
+                    "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
                 )
             },
         )
+
+        r.raise_for_status()
+        books = r.json()
+        #pprint(books)
+
         for book in books["products"]:
             #ignore non-english books
             if (book["language"] == "english"):

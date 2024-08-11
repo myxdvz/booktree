@@ -9,6 +9,7 @@ import myx_utilities
 import myx_mam
 import myx_args
 import csv
+import httpx
 
 #Global Vars
 allFiles=[]
@@ -21,9 +22,10 @@ unmatchedFiles=[]
 audibleAuthFile=""
 
 #Main Functions
-def buildTreeFromLog(inputFile, path, mediaPath, logfile, dryRun=False):
+def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
     #read from the logfile - generate book files from there
     book={}
+    inputFile=myx_args.params.file
     if os.path.exists(inputFile):        
         with open(inputFile, newline="", errors='ignore', encoding='utf-8',) as csv_file:
             try:
@@ -77,7 +79,7 @@ def buildTreeFromLog(inputFile, path, mediaPath, logfile, dryRun=False):
             pprint (book)
 
         #login to Audible
-        auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
+        #auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
 
         #Process the books, for the most part this is run, because id3 info is bad/empty
         for b in book.keys():
@@ -91,7 +93,7 @@ def buildTreeFromLog(inputFile, path, mediaPath, logfile, dryRun=False):
                     book[b].getMAMBooks(myx_args.params.session, bf)
 
                     #Search Audible using the provided id3 metadata in the input file
-                    book[b].getAudibleBooks(client)
+                    book[b].getAudibleBooks(httpx)
 
                     print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
                     myx_utilities.printDivider()
@@ -114,7 +116,7 @@ def buildTreeFromLog(inputFile, path, mediaPath, logfile, dryRun=False):
                         pprint(book[b])
             
         #disconnect
-        myx_audible.audibleDisconnect(auth)
+        #myx_audible.audibleDisconnect(auth)
 
         # #Create Hardlinks
         print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
@@ -220,7 +222,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     #At this point all Book files should have already been probed
 
     #login to Audible
-    auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
+    # auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
 
     #Find Book Matches from MAM and Audible
     for b in book.keys():    
@@ -237,8 +239,8 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
                 
             #now, Search Audible using either MAM (better) or ffprobe metadata
             if (myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible"):
-                book[b].getAudibleBooks(client)
-
+                book[b].getAudibleBooks(httpx)
+                
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()
 
@@ -260,7 +262,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
                 pprint(book[b])
         
     #disconnect
-    myx_audible.audibleDisconnect(auth)
+    # myx_audible.audibleDisconnect(auth)
 
     #Create Hardlinks
     print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
@@ -286,13 +288,12 @@ def main():
     #validate that source_path and media_path exists
     path=myx_args.params.source_path
     mediaPath=myx_args.params.media_path
-    inputFile=myx_args.params.input
 
     if (os.path.exists(path) and os.path.exists(mediaPath)):
         #build tree from identified sources
         match myx_args.params.metadata:
 
-            case "log" : buildTreeFromLog(inputFile, path, mediaPath, logfile, myx_args.params.dry_run)
+            case "log" : buildTreeFromLog(path, mediaPath, logfile, myx_args.params.dry_run)
             
             case _: buildTreeFromHybridSources(path, mediaPath, logfile, myx_args.params.dry_run)
         
@@ -314,12 +315,6 @@ if __name__ == "__main__":
     #start the program
     main()
 
-
-
  
-
-    
-
-
 
 

@@ -51,9 +51,6 @@ usage: python booktree.py [-h] {mam|audible|mam-audible} [-user USER] [-pwd PWD]
 | ----------- | ----------- | ----------- |
 |  -h, --help |           Show this help message and exit||
 |  {audible,mam,mam-audible,log} | Source of the metada: (mam, audible,log)|mam-audible|
-|  -user USER            |Your audible username|Required for audible|
-|  -pwd PWD              |Your audible password|Required for audible|
-|  --input FILE           |if source of metadata is log, path to the log file.||
 |  --file FILE            |For directory scan, the file(s) path/pattern you want to process.  Accepts * and ?|\*.m4b|
 |  --source_path SOURCE_PATH|Where your unorganized files are|Required|
 |  --media_path MEDIA_PATH|Where your organized files will be, i.e. your Audiobookshelf library|Required|

@@ -1,4 +1,3 @@
-
 import requests
 import json
 import os
@@ -9,7 +8,7 @@ import myx_args
 
 
 #MAM Functions
-def searchMAM(session, titleFilename, authors, lang_code=None, audiobook=False, ebook=False, searchIn="myReseed"):
+def searchMAM(session, titleFilename, authors, extension, lang_code=None, audiobook=False, ebook=False, searchIn="myReseed"):
     # fill in mam_id for first run
     headers = {"cookie": f"mam_id={session}"}
 
@@ -28,18 +27,27 @@ def searchMAM(session, titleFilename, authors, lang_code=None, audiobook=False, 
 
         mam_categories = []
         if audiobook:
-            mam_categories.append(13)
+            mam_categories.append(13) #audiobooks
+            mam_categories.append(16) #radio
         if ebook:
             mam_categories.append(14)
         if not mam_categories:
             return None
+        
+        #put paren around authors and titleFilename
+        if len(authors):
+            authors = f"({authors})"
 
+        if len(titleFilename):
+            titleFilename = f"({titleFilename})"
+    
         params = {
             "tor": {
-                "text": f'{authors} {titleFilename} @dummy mamDummy',  # The search string.
+                "text": f'{authors} {titleFilename} {extension} @dummy mamDummy',  # The search string.
                 "srchIn": {
                     "title": "true",
                     "author": "true",
+                    "fileTypes": "true",
                     "filenames": "true"
                 },
                 "main_cat": mam_categories,
@@ -68,9 +76,9 @@ def searchMAM(session, titleFilename, authors, lang_code=None, audiobook=False, 
 
     return None
 
-def getMAMBook(session, titleFilename="", authors=""):
+def getMAMBook(session, titleFilename="", authors="", extension=""):
     books=[]
-    mamBook=searchMAM(session, titleFilename, authors, 1, True, False)
+    mamBook=searchMAM(session, titleFilename, authors, extension, 1, True, False)
     if (mamBook is not None):
         for b in mamBook:
             #pprint(b)
