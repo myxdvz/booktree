@@ -9,7 +9,7 @@ It does the following:
   - create a tree structure on the target folder, ideally your media folder (like your abs audiobook library folder)
   - hardlink the audiobook file to the target folder
 
-**booktree** builds the following heirarchy on the target folder:
+<mark>booktree</mark> builds the following heirarchy on the target folder:
 * <media_path>/Author/Title (If there is no series information)
 * <media_path>/Author/Series/Series #Part - Title
 
@@ -44,7 +44,7 @@ It does the following:
 
 ### Help and Examples
 ~~~
-usage: python booktree.py [-h] {mam|audible|mam-audible} [-user USER] [-pwd PWD] [--file FILE] --source_path SOURCE_PATH --media_path MEDIA_PATH [--log_path LOG_PATH] [--dry-run] [--verbose] [--session]
+usage: python booktree.py [-h] {mam|audible|mam-audible|log} [--file FILE] --source_path SOURCE_PATH --media_path MEDIA_PATH [--log_path LOG_PATH] [--dry-run] [--verbose] [--session]
 ~~~
 
 | Flag | Description | Default Value |
@@ -64,40 +64,51 @@ usage: python booktree.py [-h] {mam|audible|mam-audible} [-user USER] [-pwd PWD]
 
 #### Use Case #1: Minimum usage required - Process all m4b files under current folder to /data/media/abs.
 ~~~
-$ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --media_path /data/media/abs [--dryn-run]
+$ python booktree.py --media_path /data/media/abs [--dryn-run]
 ~~~
 
 #### Use Case #2a: One Book in a folder - Process all m4b files from /downloads/01 The Lies of Locke Lamora to /data/media/abs.
 ~~~
-$ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "/downloads/01 The Lies of Locke Lamora" --media_path /data/media/abs [--dryn-run]
+$ python booktree.py --source_path "/downloads/01 The Lies of Locke Lamora" --media_path /data/media/abs [--dryn-run]
 ~~~
 
 #### Use Case #2b: One Book in a folder - Process all m4b files from a folder 01 The Lies of Locke Lamora somewhere under /downloads to /data/media/abs.
 ~~~
-$ python booktree.py audible --file "**/01 The Lies of Locke Lamora/*.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path "/downloads" --media_path /data/media/abs [--dryn-run]
+$ python booktree.py --file "**/01 The Lies of Locke Lamora/*.m4b" --source_path "/downloads" --media_path /data/media/abs [--dryn-run]
 ~~~
 
 #### Use Case #3a: One Book in a file (that is under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" somewhere under /downloads to "/data/media/abs"
 ~~~
-$ python booktree.py audible --file "**/KATE.DANIELS.04.Magic Bleeds.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /downloads --media_path /data/media/abs [--dry-run]
+$ python booktree.py --file "**/KATE.DANIELS.04.Magic Bleeds.m4b" --source_path /downloads --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #3b: One Book in a file (that is NOT under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" /downloads/Matchup to "/data/media/abs" For this use case, it is IMPORTANT that the --source_path be the parent folder of the file
 ~~~
-$ python booktree.py audible --file "MatchUp.m4b" -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /downloads/MatchUp --media_path /data/media/abs [--dry-run]
+$ python booktree.py --file "MatchUp.m4b" --source_path /downloads/MatchUp --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #4: All audiobooks under a folder - Recursively process all m4b files from /downloads to /data/media/abs.
 ~~~
-$ python booktree.py audible -user AUDIBLE-USER -pwd AUDIBLE-PWD --source_path /downloads --media_path /data/media/abs [--dryn-run]
+$ python booktree.py --source_path /downloads --media_path /data/media/abs [--dryn-run]
 ~~~
 
-## FAQ
-**Q:  My files are not from MAM, can I still use this tool?**
-<p>A: Use audible as metadata source, i.e., booktree.py audible</p>
+#### Use Case #5: Reprocess the logfile named inputFile.csv and rename/hardlink files from /downloads to /data/media/abs
+~~~
+$ python booktree.py log --file inputFile.csv --source_path /downloads --media_path /data/media/abs [--dryn-run]
+~~~
 
-**Q:  What if the mam or audible search returns multiple matches?**
-<p>A: Fuzzymatch is used to get the best match</p>
+#### Use Case #6: Process files from /downloads to /data/media/abs, use audible only, not MAM
+~~~
+$ python booktree.py audible --source_path /downloads --media_path /data/media/abs [--dryn-run]
+~~~
+
+
+## FAQ
+  **Q:  My files are not from MAM, can I still use this tool?**
+  <p>A: Use audible as metadata source, i.e., booktree.py audible</p>
+
+  **Q:  What if the mam or audible search returns multiple matches?**
+  <p>A: Fuzzymatch is used to get the best match</p>
 
 ## Dependencies
 * Python >= 3.10
