@@ -112,7 +112,7 @@ python booktree.py audible --source_path /downloads --media_path /data/media/abs
 ## Dependencies
 * Python >= 3.10
 * ffmpeg
-* audible
+* httpx
 * thefuzz 
 
 run pip install -r requirements.txt to install dependencies
