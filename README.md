@@ -64,44 +64,43 @@ usage: python booktree.py [-h] {mam|audible|mam-audible|log} [--file FILE] --sou
 
 #### Use Case #1: Minimum usage required - Process all m4b files under current folder to /data/media/abs.
 ~~~
-$ python booktree.py --media_path /data/media/abs [--dryn-run]
+python booktree.py --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #2a: One Book in a folder - Process all m4b files from /downloads/01 The Lies of Locke Lamora to /data/media/abs.
 ~~~
-$ python booktree.py --source_path "/downloads/01 The Lies of Locke Lamora" --media_path /data/media/abs [--dryn-run]
+python booktree.py --source_path "/downloads/01 The Lies of Locke Lamora" --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #2b: One Book in a folder - Process all m4b files from a folder 01 The Lies of Locke Lamora somewhere under /downloads to /data/media/abs.
 ~~~
-$ python booktree.py --file "**/01 The Lies of Locke Lamora/*.m4b" --source_path "/downloads" --media_path /data/media/abs [--dryn-run]
+python booktree.py --file "**/01 The Lies of Locke Lamora/*.m4b" --source_path "/downloads" --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #3a: One Book in a file (that is under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" somewhere under /downloads to "/data/media/abs"
 ~~~
-$ python booktree.py --file "**/KATE.DANIELS.04.Magic Bleeds.m4b" --source_path /downloads --media_path /data/media/abs [--dry-run]
+python booktree.py --file "**/KATE.DANIELS.04.Magic Bleeds.m4b" --source_path /downloads --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #3b: One Book in a file (that is NOT under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" /downloads/Matchup to "/data/media/abs" For this use case, it is IMPORTANT that the --source_path be the parent folder of the file
 ~~~
-$ python booktree.py --file "MatchUp.m4b" --source_path /downloads/MatchUp --media_path /data/media/abs [--dry-run]
+python booktree.py --file "MatchUp.m4b" --source_path /downloads/MatchUp --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #4: All audiobooks under a folder - Recursively process all m4b files from /downloads to /data/media/abs.
 ~~~
-$ python booktree.py --source_path /downloads --media_path /data/media/abs [--dryn-run]
+python booktree.py --source_path /downloads --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #5: Reprocess the logfile named inputFile.csv and rename/hardlink files from /downloads to /data/media/abs
 ~~~
-$ python booktree.py log --file inputFile.csv --source_path /downloads --media_path /data/media/abs [--dryn-run]
+python booktree.py log --file inputFile.csv --source_path /downloads --media_path /data/media/abs [--dry-run]
 ~~~
 
 #### Use Case #6: Process files from /downloads to /data/media/abs, use audible only, not MAM
 ~~~
-$ python booktree.py audible --source_path /downloads --media_path /data/media/abs [--dryn-run]
+python booktree.py audible --source_path /downloads --media_path /data/media/abs [--dry-run]
 ~~~
-
 
 ## FAQ
   **Q:  My files are not from MAM, can I still use this tool?**
