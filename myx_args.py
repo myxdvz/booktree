@@ -23,6 +23,8 @@ def importArgs():
     parser.add_argument("--session", default="", help="Your session cookie")
     #verbose
     parser.add_argument("--verbose", default=False, action="store_true", help="Level of prints on the screen")
+    #OPf file?
+    parser.add_argument("--opf", default=False, action="store_true", help="If provided, creates OPF file")
 
     #get all arguments
     args = parser.parse_args()

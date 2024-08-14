@@ -136,6 +136,11 @@ class Book:
         book=self.getDictionary(book)
         book["title"]=""
         return book
+    
+    def createOPF(self, path):
+        #creates an OPF file for this book at the specified path
+        myx_utilities.createOPF(self, path)
+
           
 #Book File Class
 @dataclass
@@ -408,10 +413,9 @@ class BookFile:
 
             #Does this book belong in a series?
             if (len(book.series) > 0):
-                for s in book.series:
-                    paths.append("{}/{}/{} - {}/".format(stdAuthor, s.name, s.getSeriesPart(), book.title))
+                paths.append(os.path.join(stdAuthor, book.series[0].name, f"{book.series[0].getSeriesPart()} - {book.title}"))
             else:
-                paths.append("{}/{}/".format(stdAuthor, book.title))   
+                paths.append(os.path.join(stdAuthor, book.title))
 
         return paths  
     
@@ -503,79 +507,92 @@ class MAMBook:
 
         #Does this book belong in a series?
         if (len(series) > 0):
-            for s in series:
-                cs = myx_utilities.cleanseSeries(s.getSeriesPart())
-                if len(cs):
-                    cs += f" - {title}"
-                else:
-                    cs = title
-                os.path.join(stdAuthor, s.name, cs)
-                paths.append(os.path.join(stdAuthor, s.name, cs))
+            paths.append(os.path.join(stdAuthor, series[0].name, f"{series[0].getSeriesPart()} - {title}"))
         else:
-            
-            paths.append(os.path.join(stdAuthor, title))   
+            paths.append(os.path.join(stdAuthor, title))
+
         return paths  
 
     def getAudibleBooks(self, client):
+
         books=[]
+
+        #check if cached
+        if self.isCached("audible"):
+            #load from cache
+            f = self.loadFromCache("audible")
+            books = list(f)
         
-        #Search Audible using either MAM (better) or ffprobe metadata
-        if (self.bestMAMMatch is not None):
-            book = self.bestMAMMatch
-            title = book.getCleanTitle()
-        else:
-            book = self.ffprobeBook     
-            if (self.isMultiFileBook):
-                title = myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)
+        else:        
+            #Search Audible using either MAM (better) or ffprobe metadata
+            if (self.bestMAMMatch is not None):
+                book = self.bestMAMMatch
+                title = book.getCleanTitle()
             else:
-                title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
+                book = self.ffprobeBook     
+                if (self.isMultiFileBook):
+                    title = myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)
+                else:
+                    title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
-        #pprint(book)
-        
-        keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
-                                             myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)])
-        print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tkeywords:{keywords}")
-        #search each author until a match is found
-        for author in book.authors:
-            sAuthor=myx_utilities.cleanseAuthor(author.name)
-            books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, keywords=keywords)
+            #pprint(book)
+            
+            keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+                                                myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)])
+            print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tkeywords:{keywords}")
+            #search each author until a match is found
+            for author in book.authors:
+                sAuthor=myx_utilities.cleanseAuthor(author.name)
+                books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, keywords=keywords)
 
-            #book found, exit for loop
-            if ((books is not None) and len(books)):
-                break
-        
-        self.audibleMatches=books
+                #book found, exit for loop
+                if ((books is not None) and len(books)):
+                    break
+            
+            self.audibleMatches=books
+
+            #cache search results
+            self.cacheMe("audible", books)
+
+        #process search results
         if (self.audibleMatches is not None):
             if (myx_args.params.verbose):
                     print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
 
             if (len(self.audibleMatches) > 1):
                 #find the best match
-                #for each matched book, calculate the fuzzymatch rate
-                mamBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
-                bestMatchRate=0
+                #find an exact duration match
+                found=False
+                #print (f"Finding exact duration match {self.getRunTimeLength()}")
                 for product in books:
                     book=myx_audible.product2Book(product)
-
-                    #if duration is an exact match, assume it is the book
+                    #print (f"\n\t{book.asin}: {book.length}")
                     if (self.getRunTimeLength() == book.length):
-                        print (f"Found exact duration match {pprint(book)}")
+                        #print (f"Exact Match Found, {book.asin} : {book.length}")
+                        found=True
                         self.bestAudibleMatch=book
                         book.matchRate=100
-                        break
-                    else:
-                        print (f"Fuzzy Match {pprint(book)}")
+
+                #if an exact duration match was not found, do fuzzy match        
+                mamBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
+                bestMatchRate=0
+                if (not found):
+                    #print (f"Didn't find exact duration match.. using fuzzymatch")
+                    for product in books:
+                        book=myx_audible.product2Book(product)
+                        #print (f"Fuzzy Match {str(book)}")
                         audibleBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
                         matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
                         book.matchRate=matchRate
 
-                    #is this better?
-                    if (matchRate > bestMatchRate):
-                        bestMatchRate=matchRate
-                        self.bestAudibleMatch=book
+                        #is this better?
+                        if (matchRate > bestMatchRate):
+                            bestMatchRate=matchRate
+                            self.bestAudibleMatch=book
+            
             else:
                 #the only match is the best match
-                if ((books is not None) and (len(books))):
+                if ((books is not None) and (len(books) == 1)):
                     self.bestAudibleMatch=myx_audible.product2Book(books[0])
 
         #pprint(self.bestAudibleMatch)
@@ -600,14 +617,22 @@ class MAMBook:
             
             #for each file for this book                
             for f in self.files:
-                #if a book belongs to multiple series, hardlink them to all series
+                #if a book belongs to multiple series, only use the first one
                 for p in f.getTargetPaths(self.metadataBook):
                     if (not dryRun):
-                        f.hardlinkFile(f.fullPath, os.path.join(targetFolder, myx_utilities.cleanseSeries(p)))
-                    
-                    if myx_args.params.verbose:
-                        print (f"Hardlinking {f.fullPath} to {os.path.join(targetFolder,myx_utilities.cleanseSeries(p))}")
-                f.isHardLinked=True
+                        #hardlink the file
+                        p = os.path.join(targetFolder,myx_utilities.cleanseSeries(p))
+                        if myx_args.params.verbose:
+                            print (f"Hardlinking {f.fullPath} to {p}")
+
+                        f.hardlinkFile(f.fullPath, p)                   
+                        f.isHardLinked=True
+
+                        #generate the OPF file
+                        if myx_args.params.verbose:
+                            print (f"Generating OPF file ...")
+
+                        self.metadataBook.createOPF(p)
                 
                 if myx_args.params.verbose:
                     myx_utilities.printDivider()
@@ -643,33 +668,43 @@ class MAMBook:
         return book    
 
     def getMAMBooks(self, session, bookFile:BookFile):
-        #search MAM record for this book
-        title=" | ".join([f'"{myx_utilities.cleanseTitle(self.name, stripaccents=False, stripUnabridged=False)}"', 
-                          f'"{myx_utilities.cleanseTitle(bookFile.ffprobeBook.title, stripaccents=False, stripUnabridged=False)}"',
-                          f'"{bookFile.getFileName()}"'])
-        authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
-        extension = f'"{bookFile.getExtension()}"'
+        #check if cached
+        if self.isCached("mam"):
+            #load from cache
+            f = self.loadFromCache("mam")
+            self.mamMatches = list(f)
+        else:
+            #search MAM record for this book
+            # title=" | ".join([f'"{myx_utilities.cleanseTitle(self.name, stripaccents=False, stripUnabridged=False)}"', 
+            #                 f'"{myx_utilities.cleanseTitle(bookFile.ffprobeBook.title, stripaccents=False, stripUnabridged=False)}"',
+            #                 f'"{bookFile.getFileName()}"'])
+            title = f'"{bookFile.getFileName()}"'
+            authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
+            extension = f'"{bookFile.getExtension()}"'
+            
+            #if this is a single or normal file, do a filename search
+            # if (not self.isMultiBookCollection):
+            #     titleFilename = f'"{bookFile.getFileName()}"'
+            #     if (myx_args.params.metadata == "log"):
+            #         #user must have cleaned the id3 tags, use that instead of the book.name
+            #         titleFilename.join(f" {bookFile.ffprobeBook.title}")
+            # else:
+            #     #if this is a multi-file book, use book name and author
+            #     titleFilename=title
         
-        #if this is a single or normal file, do a filename search
-        # if (not self.isMultiBookCollection):
-        #     titleFilename = f'"{bookFile.getFileName()}"'
-        #     if (myx_args.params.metadata == "log"):
-        #         #user must have cleaned the id3 tags, use that instead of the book.name
-        #         titleFilename.join(f" {bookFile.ffprobeBook.title}")
-        # else:
-        #     #if this is a multi-file book, use book name and author
-        #     titleFilename=title
-     
-        # Search using book key and authors (using or search in case the metadata is bad)
-        print(f"Searching MAM for\n\tTitleFilename: {title}\n\tauthors:{authors}")
-        self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension)
+            # Search using book key and authors (using or search in case the metadata is bad)
+            print(f"Searching MAM for\n\tTitleFilename: {title}\n\tauthors:{authors}")
+            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension)
 
-        # was the author inaccurate? (Maybe it was LastName, FirstName or accented)
-        # print (f"Trying again because Filename, Author = {len(self.mamMatches)}")
-        if len(self.mamMatches) == 0:
-            #try again, without author this time
-            print(f"Widening MAM search using just\n\tTitleFilename: {title}")
-            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, extension=extension)
+            # was the author inaccurate? (Maybe it was LastName, FirstName or accented)
+            # print (f"Trying again because Filename, Author = {len(self.mamMatches)}")
+            if len(self.mamMatches) == 0:
+                #try again, without author this time
+                print(f"Widening MAM search using just\n\tTitleFilename: {title}")
+                self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, extension=extension)
+
+            #cache me
+            self.cacheMe("mam", self.mamMatches)
 
         # # print (f"Trying again because Filename = {len(self.mamMatches)}")
         # if len(self.mamMatches) == 0:
@@ -690,7 +725,35 @@ class MAMBook:
 
         return len(self.mamMatches)
     
+    def getHashKey(self):
+        return myx_utilities.getHash(self.name)
 
+    def isCached(self, category):
+        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        bookFile = os.path.join(os.getcwd(), "__cache__", category, self.getHashKey())
+        found = os.path.exists(bookFile)  
+        #print(f"Checking if {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}\n\tCached: {found}")
+        return found      
+        
+    def cacheMe(self, category, content):
+        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        bookFile = os.path.join(os.getcwd(), "__cache__", category, self.getHashKey())
+        with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
+            #file.write(str(content))
+            pprint(content, file)
+        
+        #print(f"Caching {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}")
+        return os.path.exists(bookFile)        
 
+    def loadFromCache(self, category):
+        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        bookFile = os.path.join(os.getcwd(), "__cache__", category, self.getHashKey())
+        with open(bookFile, mode='r', encoding='utf-8') as file:
+            f = file.read()
+        
+        #print(f"Retrieving {self.name} with hashKey {self.getHashKey()} from cache\n\tFile: {bookFile}")
+        return f
+        
+    
 
 

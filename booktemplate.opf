@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ns0:package xmlns:dc='http://purl.org/dc/elements/1.1/' xmlns:ns0='http://www.idpf.org/2007/opf' unique-identifier='BookId' version='2.0'>
+  <ns0:metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
+          xmlns:opf="http://www.idpf.org/2007/opf">
+
+<!-- Open Packaging Format (opf) File layout for audiobookshelf -->
+<!-- author, narrator, genre series, {series/volume number}, and tag can be repeated as desired -->
+
+    <dc:title>__TITLE__</dc:title>
+    <dc:subtitle>__SUBTITLE__</dc:subtitle>
+    <dc:creator opf:role="aut">__AUTHOR__</dc:creator>      <!-- author -->
+    <dc:creator opf:role="nrt">__NARRATOR__</dc:creator>      <!-- narrator -->
+    <dc:language>eng</dc:language>
+    <dc:identifier opf:scheme="ASIN">__ASIN__</dc:identifier>
+    <ns0:meta name="calibre:series" content="__SERIES__" /> <!-- series -->
+    <ns0:meta name="calibre:series_index" content="__SERIESPART__" /> <!-- series part -->
+    <dc:tag></dc:tag>
+  </ns0:metadata>
+</ns0:package>

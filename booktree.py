@@ -47,7 +47,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                         bf.ffprobeBook.setSeries(row["id3-seriesparts"])
 
                         #does this book exist?
-                        hashKey=str(hash(row["book"]))
+                        hashKey=myx_utilities.getHash(row["book"])
                         if (hashKey in book):
                             #print (f"{str(row["book"])} exists, just adding the file {bf.file}")
                             book[hashKey].files.append(bf)
@@ -84,7 +84,8 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
         #Process the books, for the most part this is run, because id3 info is bad/empty
         for b in book.keys():
             #try and match again, the assumption, is that the log has the right information
-            if (book[hashKey].metadata != "as-is"):
+            #TODO: Check if the file has been processed before, if so skip
+            if (book[b].metadata != "as-is") and (not book[b].isCached("book")):
                 print(f"Processing: {book[b].name}...")
                 #if it's not Matched, match it
                 if ((book[b].bestMAMMatch is None) and (book[b].bestAudibleMatch is None)):
@@ -176,7 +177,8 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             key=bf.getParentFolder()
         
         #if the book exists, this must be multi-file book, append the files
-        hashKey=str(hash(key))
+        hashKey=myx_utilities.getHash(str(key))
+        #print (f"Book: {key}\nHashKey: {hashKey}")
         if hashKey in book:
             book[hashKey].files.append(bf)
         else:
@@ -226,8 +228,10 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
     #Find Book Matches from MAM and Audible
     for b in book.keys():    
-        if (not book[b].isMultiBookCollection):
-            #processed book
+        #if this book has not been processed before AND it is not a multibook collection
+        #print (f"Book: {b} isCached: {book[b].isCached("book")}")
+        if (not book[b].isCached("book")) and (not book[b].isMultiBookCollection):
+            #process the book
             print(f"Processing: {book[b].name}...")
             normalBooks.append(book[b])            
             #Process these books the same way, essentially based on the first book in the file list
@@ -260,6 +264,11 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
             if myx_args.params.verbose:
                 pprint(book[b])
+
+            #cache this book
+            book[b].cacheMe("book", book[b])
+        else:
+            print(f"Skipping: {book[b].name}...")
         
     #disconnect
     # myx_audible.audibleDisconnect(auth)
@@ -304,9 +313,6 @@ if __name__ == "__main__":
     
     #process commandline arguments
     myx_args.params = myx_args.importArgs()
-
-    #add calculated parameters
-    audibleAuthFile=os.path.join(myx_args.params.log_path, "booktree.json")
 
     #set
     #pprint(args)

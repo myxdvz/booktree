@@ -4,8 +4,10 @@ from thefuzz import fuzz
 from pprint import pprint
 import os, sys, subprocess, shlex, re
 from glob import iglob, glob
+import mimetypes
 import csv
 import json
+import hashlib
 import myx_classes
 import myx_args
 
@@ -286,3 +288,49 @@ def getLogHeaders():
     headers=['book', 'file', 'isMatched', 'isHardLinked', 'mamCount', 'audibleMatchCount', 'metadatasource', 'paths', 'id3-matchRate', 'id3-asin', 'id3-title', 'id3-subtitle', 'id3-publicationName', 'id3-length', 'id3-duration', 'id3-series', 'id3-authors', 'id3-narrators', 'id3-seriesparts', 'mam-matchRate', 'mam-asin', 'mam-title', 'mam-subtitle', 'mam-publicationName', 'mam-length', 'mam-duration', 'mam-series', 'mam-authors', 'mam-narrators', 'mam-seriesparts', 'adb-matchRate', 'adb-asin', 'adb-title', 'adb-subtitle', 'adb-publicationName', 'adb-length', 'adb-duration', 'adb-series', 'adb-authors', 'adb-narrators', 'adb-seriesparts']
                     
     return dict.fromkeys(headers)
+
+def createOPF(book, path):
+    # --- Generate .opf Metadata file ---
+    opfTemplate=os.path.join(os.getcwd(), "booktemplate.opf") 
+    with open(opfTemplate, mode='r') as file:
+        template = file.read()
+
+    # - Author -
+    if book.getAuthors() == '__unknown__':
+        template = re.sub(r"__AUTHOR__", '', template)
+    else:
+        template = re.sub(r"__AUTHOR__", book.getAuthors(), template)
+
+    # - Title -
+    template = re.sub(r"__TITLE__", book.title, template)
+
+    # - Subtitle -
+    template = re.sub(r"__SUBTITLE__", book.subtitle, template)
+
+    # - Narrator -
+    template = re.sub(r"__NARRATOR__", book.getNarrators(), template)
+
+    # - ASIN -
+    template = re.sub(r"__ASIN__", book.asin, template)
+
+    # - Series -
+    if len(book.series) and len(book.series[0].name):
+        template = re.sub(r"__SERIES__", book.series[0].name, template)
+        template = re.sub(r"__SERIESPART__", book.series[0].part, template)
+    else:
+        template = re.sub(r"__SERIES__", "", template)
+        template = re.sub(r"__SERIESPART__", "", template)
+
+    opfFile=os.path.join(path, "metadata.opf")
+    with open(opfFile, mode='w', encoding='utf-8') as file:
+        file.write(template)
+
+    return
+
+def isProcessed(hashKey):
+    #Check if this book's hashkey exists in the cache, if so - it's been processed
+    bookFile = os.join.path(os.getcwd(), "__cache__", "book", hashKey)
+    return os.path.exists(bookFile)
+
+def getHash(key):
+    return hashlib.sha256(key.encode(encoding="utf-8")).hexdigest()
