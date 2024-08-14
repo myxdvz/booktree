@@ -632,7 +632,8 @@ class MAMBook:
                         if myx_args.params.verbose:
                             print (f"Generating OPF file ...")
 
-                        self.metadataBook.createOPF(p)
+                        if (myx_args.params.opf):
+                            self.metadataBook.createOPF(p)
                 
                 if myx_args.params.verbose:
                     myx_utilities.printDivider()
