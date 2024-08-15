@@ -331,9 +331,7 @@ def createOPF(book, path):
     #     template = re.sub(r"__SERIES__", "", template)
     #     template = re.sub(r"__SERIESPART__", "", template)
 
-    if (myx_args.params.dry_run):
-        pprint (template)
-    else:
+    if (not myx_args.params.dry_run):
         opfFile=os.path.join(path, "metadata.opf")
         with open(opfFile, mode='w', encoding='utf-8') as file:
             file.write(template)
