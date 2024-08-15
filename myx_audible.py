@@ -7,46 +7,58 @@ import myx_classes
 import myx_args
 
 def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords=""):
+
     if myx_args.params.verbose:
         print (f"getAudibleBook\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
-    
+
     enBooks=[]
-    try:
-        if len(asin) : 
-            p=f"https://api.audible.com/1.0/catalog/products/{asin}"
-        else:
-            p=f"https://api.audible.com/1.0/catalog/products"
+    cacheKey = myx_utilities.getHash(f"{asin}{title}{authors}{narrators}{keywords}")
+    if myx_utilities.isCached(cacheKey, "audible"):
+        #this search has been done before, retrieve the results
+        books = myx_utilities.loadFromCache(cacheKey, "audible")
 
-        r = client.get (
-            p,
-            params={
-                "asin": asin,
-                "title": title,
-                "author": authors,
-                "narrator": narrators,
-                "keywords": keywords,
-                "response_groups": (
-                    "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
-                )
-            },
-        )
+    else:
+        try:
+            if len(asin) : 
+                p=f"https://api.audible.com/1.0/catalog/products/{asin}"
+            else:
+                p=f"https://api.audible.com/1.0/catalog/products"
 
-        r.raise_for_status()
-        books = r.json()
-        #pprint(books)
+            r = client.get (
+                p,
+                params={
+                    "asin": asin,
+                    "title": title,
+                    "author": authors,
+                    "narrator": narrators,
+                    "keywords": keywords,
+                    "response_groups": (
+                        "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
+                    )
+                },
+            )
+
+            r.raise_for_status()
+            books = r.json()
+
+            #cache this results
+            myx_utilities.cacheMe(cacheKey, "audible", books)
+
+            #pprint(books)
+        except Exception as e:
+                print(f"Error searching audible: {e}")
+
     
-        #check for ["product"] or ["products"]
-        if "product" in books.keys():
-            enBooks.append(books["product"])
-        elif "products" in books.keys():
-            for book in books["products"]:
-                #ignore non-english books
-                if (book["language"] == "english"):
-                    enBooks.append(book)
+    #check for ["product"] or ["products"]
+    if "product" in books.keys():
+        enBooks.append(books["product"])
+    elif "products" in books.keys():
+        for book in books["products"]:
+            #ignore non-english books
+            if (book["language"] == "english"):
+                enBooks.append(book)
 
-        return enBooks
-    except Exception as e:
-        print(f"Error searching audible: {e}")
+    return enBooks
 
 def getBookByAsin(client, asin):
     print ("getBookByASIN: ", asin)

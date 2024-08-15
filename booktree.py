@@ -52,7 +52,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                             #print (f"{str(row["book"])} exists, just adding the file {bf.file}")
                             book[hashKey].files.append(bf)
                         else:
-                            print (f"{str(row["book"])} is new, adding the book")
+                            print (f"{str(row['book'])} is new, adding the book")
                             book[hashKey]= myx_classes.MAMBook(str(row["book"]))
                             book[hashKey].metadata = (row["metadatasource"])
                             book[hashKey].files.append(bf)
@@ -229,7 +229,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     #Find Book Matches from MAM and Audible
     for b in book.keys():    
         #if this book has not been processed before AND it is not a multibook collection
-        #print (f"Book: {b} isCached: {book[b].isCached("book")}")
+        #print (f"Book: {b} isCached: {book[b].isCached('book')}")
         if (not book[b].isCached("book")) and (not book[b].isMultiBookCollection):
             #process the book
             print(f"Processing: {book[b].name}...")
@@ -265,8 +265,9 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             if myx_args.params.verbose:
                 pprint(book[b])
 
-            #cache this book
-            book[b].cacheMe("book", book[b])
+            #cache this book - unless it's a dry run
+            if (not dryRun):
+                book[b].cacheMe("book", book[b])
         else:
             print(f"Skipping: {book[b].name}...")
         
@@ -300,11 +301,10 @@ def main():
 
     if (os.path.exists(path) and os.path.exists(mediaPath)):
         #build tree from identified sources
-        match myx_args.params.metadata:
-
-            case "log" : buildTreeFromLog(path, mediaPath, logfile, myx_args.params.dry_run)
-            
-            case _: buildTreeFromHybridSources(path, mediaPath, logfile, myx_args.params.dry_run)
+        if (myx_args.params.metadata == "log"):
+            buildTreeFromLog(path, mediaPath, logfile, myx_args.params.dry_run)
+        else:
+            buildTreeFromHybridSources(path, mediaPath, logfile, myx_args.params.dry_run)
         
     else:
         print(f"Your source and media paths are invalid. Please check and try again!\nSource:{path}\nMedia:{mediaPath}")

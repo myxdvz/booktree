@@ -327,10 +327,32 @@ def createOPF(book, path):
 
     return
 
-def isProcessed(hashKey):
-    #Check if this book's hashkey exists in the cache, if so - it's been processed
-    bookFile = os.join.path(os.getcwd(), "__cache__", "book", hashKey)
-    return os.path.exists(bookFile)
-
 def getHash(key):
     return hashlib.sha256(key.encode(encoding="utf-8")).hexdigest()
+
+def isCached(key, category):
+    #Check if this book's hashkey exists in the cache, if so - it's been processed
+    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    found = os.path.exists(bookFile)  
+    #print(f"Checking if {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}\n\tCached: {found}")
+    return found      
+    
+def cacheMe(key, category, content):
+    #Check if this book's hashkey exists in the cache, if so - it's been processed
+    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
+        file.write(json.dumps(content))
+        #pprint(content, file)
+    
+    #print(f"Caching {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}")
+    return os.path.exists(bookFile)        
+
+def loadFromCache(key, category):
+    #print (f"Loading {key} from {category} cache...")
+    #Check if this book's hashkey exists in the cache, if so - it's been processed
+    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    with open(bookFile, mode='r', encoding='utf-8') as file:
+        f = file.read()
+    
+    #print(f"Retrieving {self.name} with hashKey {self.getHashKey()} from cache\n\tFile: {bookFile}")
+    return json.loads(f)
