@@ -163,23 +163,24 @@ def logBookRecords(logFilePath, bookFiles):
             print("file {}: {}".format(logFilePath, e))
 
 def logBooks(logFilePath, books):
-    write_headers = not os.path.exists(logFilePath)
-    with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
-        try:
-            fields=getLogHeaders()
-            for book in books:
-                for file in book.files:
-                    row=book.getLogRecord(file)
+    if len(books):
+        write_headers = not os.path.exists(logFilePath)
+        with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
+            try:
+                fields=getLogHeaders()
+                for book in books:
+                    for file in book.files:
+                        row=book.getLogRecord(file)
 
-                    #create a writer
-                    writer = csv.DictWriter(csv_file, fieldnames=fields)
-                    if write_headers:
-                        writer.writeheader()
-                        write_headers=False
-                    writer.writerow(row)
+                        #create a writer
+                        writer = csv.DictWriter(csv_file, fieldnames=fields)
+                        if write_headers:
+                            writer.writeheader()
+                            write_headers=False
+                        writer.writerow(row)
 
-        except csv.Error as e:
-            print("file {}: {}".format(logFilePath, e))    
+            except csv.Error as e:
+                print("file {}: {}".format(logFilePath, e))    
 
 def findBookFiles (baseFileList, filegrouping):
     

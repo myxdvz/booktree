@@ -556,7 +556,7 @@ class MAMBook:
                 for product in books:
                     book=myx_audible.product2Book(product)
                     #print (f"\n\t{book.asin}: {book.length}")
-                    if (self.getRunTimeLength() == book.length):
+                    if (abs(self.getRunTimeLength() - book.length) <= 3):
                         #print (f"Exact Match Found, {book.asin} : {book.length}")
                         found=True
                         self.bestAudibleMatch=book
@@ -578,14 +578,14 @@ class MAMBook:
                         if (matchRate > bestMatchRate):
                             bestMatchRate=matchRate
                             self.bestAudibleMatch=book
-            
+
             else:
                 #the only match is the best match
                 if ((books is not None) and (len(books) == 1)):
                     self.bestAudibleMatch=myx_audible.product2Book(books[0])
 
-        #pprint(self.bestAudibleMatch)
-        if (books is not None): 
+        pprint(self.bestAudibleMatch)
+        if (books is not None):             
             return len(books) 
         else: 
             return 0
