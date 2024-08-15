@@ -267,7 +267,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
             #cache this book - unless it's a dry run
             if (not dryRun):
-                book[b].cacheMe("book", book[b])
+                book[b].cacheMe("book", str(book[b]))
         else:
             print(f"Skipping: {book[b].name}...")
         
