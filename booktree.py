@@ -311,15 +311,18 @@ def main():
 
 if __name__ == "__main__":
     
-    #process commandline arguments
-    myx_args.params = myx_args.importArgs()
+    if not sys.version_info > (3, 10):
+        print ("booktree requires python 3.10 or higher. Please upgrade your version")
+    else:
+        #process commandline arguments
+        myx_args.params = myx_args.importArgs()
 
-    #set
-    #pprint(args)
-    #myx_args.params.verbose=True
+        #set
+        #pprint(args)
+        #myx_args.params.verbose=True
 
-    #start the program
-    main()
+        #start the program
+        main()
 
 
  
