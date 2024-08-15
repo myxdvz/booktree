@@ -8,12 +8,11 @@
 
     <dc:title>__TITLE__</dc:title>
     <dc:subtitle>__SUBTITLE__</dc:subtitle>
-    <dc:creator opf:role="aut">__AUTHOR__</dc:creator>      <!-- author -->
-    <dc:creator opf:role="nrt">__NARRATOR__</dc:creator>      <!-- narrator -->
+__AUTHORS__
+__NARRATORS__    
     <dc:language>eng</dc:language>
     <dc:identifier opf:scheme="ASIN">__ASIN__</dc:identifier>
-    <ns0:meta name="calibre:series" content="__SERIES__" /> <!-- series -->
-    <ns0:meta name="calibre:series_index" content="__SERIESPART__" /> <!-- series part -->
+__SERIES__
     <dc:tag></dc:tag>
   </ns0:metadata>
 </ns0:package>
