@@ -177,7 +177,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             key=bf.getFileName()
         else:
             key=bf.getParentFolder()
-        
+
         #if the book exists, this must be multi-file book, append the files
         hashKey=myx_utilities.getHash(str(key))
         #print (f"Book: {key}\nHashKey: {hashKey}")
@@ -338,6 +338,8 @@ if __name__ == "__main__":
 
         #start the program
         main()
+        
+        
 
 
  

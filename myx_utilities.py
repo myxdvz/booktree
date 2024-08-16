@@ -356,7 +356,7 @@ def cacheMe(key, category, content):
     if (myx_args.params.no_cache):
         return False
     else:    
-        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        #create the cache file
         bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
         with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
             file.write(json.dumps(content))
@@ -370,10 +370,13 @@ def loadFromCache(key, category):
         return None
     else:    
         #print (f"Loading {key} from {category} cache...")
-        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        #return the content from the cache file
         bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
         with open(bookFile, mode='r', encoding='utf-8') as file:
             f = file.read()
         
         #print(f"Retrieving {self.name} with hashKey {self.getHashKey()} from cache\n\tFile: {bookFile}")
         return json.loads(f)
+    
+def isMultiCD(parent):
+    return re.search("disc\s?\d+", parent.lower()) or re.search("cd\s?\d+", parent.lower())

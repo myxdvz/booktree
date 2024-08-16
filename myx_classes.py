@@ -165,7 +165,8 @@ class BookFile:
         return (len(self.getParentFolder())==0)
     
     def getParentFolder(self):
-        return myx_utilities.getParentFolder(self.file, self.sourcePath)
+        parent = myx_utilities.getParentFolder(self.file, self.sourcePath)
+        return parent
 
     def getFileName(self):
         return os.path.basename(self.file)
@@ -414,13 +415,25 @@ class BookFile:
             #standardize author name (replace . with space, and then make sure that there's only single space)
             stdAuthor=myx_utilities.cleanseAuthor(author)
 
-            #Does this book belong in a series?
-            if (len(book.series) > 0):
-                paths.append(os.path.join(stdAuthor, myx_utilities.cleanseSeries(book.series[0].name), f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}"))
-            else:
-                paths.append(os.path.join(stdAuthor, myx_utilities.cleanseTitle(book.title)))
+            #is this a MultiCd file?
+            disc = self.getParentFolder()
+            print (f"File: {self.file}\nParent: {disc}")
 
-        return paths  
+            if (not myx_utilities.isMultiCD(disc)):
+                disc = ""
+
+            #Does this book belong in a series - only take the first series?
+            sPath=""
+            if (len(book.series) > 0):
+                sPath=os.path.join(stdAuthor, myx_utilities.cleanseSeries(book.series[0].name), 
+                                        f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}",
+                                        disc)
+            else:
+                sPath=os.path.join(stdAuthor, myx_utilities.cleanseTitle(book.title), disc)
+
+            paths.append(sPath)
+
+            return paths  
     
     def getLogRecord(self, bookMatch:Book):
         #returns a dictionary of the record that gets logged
@@ -497,7 +510,7 @@ class MAMBook:
             pprint (book)
         return book
 
-    def getTargetPaths(self, authors, series, title):
+    def getTargetPaths(self, authors, series, title, disc=""):
         paths=[]
         #Get primary author
         if ((authors is not None) and (len(authors) == 0)):
@@ -508,13 +521,16 @@ class MAMBook:
         #standardize author name (replace . with space, and then make sure that there's only single space)
         stdAuthor=myx_utilities.cleanseAuthor(author)
 
-        #Does this book belong in a series?
+        #Does this book belong in a series - only take the first series?
+        sPath=""
         if (len(series) > 0):
-            paths.append(os.path.join(stdAuthor, myx_utilities.cleanseSeries(series[0].name), 
-                                      f"{myx_utilities.cleanseSeries(series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(title)}"))
+            sPath=os.path.join(stdAuthor, myx_utilities.cleanseSeries(series[0].name), 
+                                      f"{myx_utilities.cleanseSeries(series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(title)}",
+                                      disc)
         else:
-            paths.append(os.path.join(stdAuthor, myx_utilities.cleanseTitle(title)))
+            sPath=os.path.join(stdAuthor, myx_utilities.cleanseTitle(title), disc)
 
+        paths.append(sPath)
         return paths  
 
     def getAudibleBooks(self, client):
@@ -639,7 +655,7 @@ class MAMBook:
             
             #for each file for this book                
             for f in self.files:
-                #if a book belongs to multiple series, only use the first one
+                #if a book belongs to multiple series, only use the first one                
                 for p in f.getTargetPaths(self.metadataBook):
                     if (not dryRun):
                         #hardlink the file
@@ -674,7 +690,7 @@ class MAMBook:
         book["audibleMatchCount"]=len(self.audibleMatches)
         book["metadatasource"]=self.metadata
         #check out the targetpath of the first bookfile
-        book["paths"]=self.files[0].getTargetPaths(self.metadataBook)
+        book["paths"]=bf.getTargetPaths(self.metadataBook)
 
         #Get FFProbe Book
         if (bf.ffprobeBook is not None):
@@ -698,6 +714,14 @@ class MAMBook:
         title = f'"{bookFile.getFileName()}"'
         authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
         extension = f'"{bookFile.getExtension()}"'
+
+        #if there is no author, we can't just have the filename be the search
+        if (len(self.ffprobeBook.authors) == 0):
+            #use the series as part of the search as well
+            if (len(self.ffprobeBook.series)):
+                title = " ".join([title, self.ffprobeBook.getSeries()])
+            elif (len(self.ffprobeBook.title)):
+                title = " ".join([title, self.ffprobeBook.title])
         
         #if this is a single or normal file, do a filename search
         # if (not self.isMultiBookCollection):
