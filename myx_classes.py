@@ -597,7 +597,7 @@ class MAMBook:
                         audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
                         matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
                         abook.matchRate=matchRate
-                        print(f"Match Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}")
+                        #print(f"Match Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}")
 
                         #is this better and the duration is within 3 minutes
                         if (matchRate > bestMatchRate):

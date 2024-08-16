@@ -327,6 +327,11 @@ if __name__ == "__main__":
         #process commandline arguments
         myx_args.params = myx_args.importArgs()
 
+        #build __cache__ folders if they don't exist
+        os.makedirs(os.path.join(os.getcwd(), "__cache__", "book"), exist_ok=True)
+        os.makedirs(os.path.join(os.getcwd(), "__cache__", "mam"), exist_ok=True)
+        os.makedirs(os.path.join(os.getcwd(), "__cache__", "audible"), exist_ok=True)
+
         #set
         #pprint(myx_args.params)
         #myx_args.params.verbose=True
