@@ -295,9 +295,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     print (f"\nLogging {len(normalBooks)} processed books")
     myx_utilities.logBooks(logfile, normalBooks)  
 
-    print(f"\nCompleted processing {len(normalBooks)} books. {len(matchedFiles)}/{len(normalBooks) - len(matchedFiles)} match/unmatch ratio.", end=" ")                 
-    if (len(multiBookCollections)):
-        print(f"Skipped {len(multiBookCollections)} multi-book collection (coming soon!)")                 
+    print(f"\nCompleted processing {len(normalBooks)} books. {len(matchedFiles)}/{len(normalBooks) - len(matchedFiles)} match/unmatch ratio.", end=" ")                              
     
     print("\n\n")
     return

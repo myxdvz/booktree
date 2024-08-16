@@ -55,9 +55,12 @@ usage: python booktree.py [-h] {mam|audible|mam-audible|log} [--file FILE] --sou
 |  --source_path SOURCE_PATH|Where your unorganized files are|Required|
 |  --media_path MEDIA_PATH|Where your organized files will be, i.e. your Audiobookshelf library|Required|
 |  --log_path LOG_PATH   |Where your log files will be|<booktree>/logs|
+|  --session | If using mam or mam-audible, include the MAM session ID||
 |  --dry-run             |If provided, will only create logfile and not actually build the tree||
 |  --verbose            |If provided, will display more debug information||
-|  --session | If using mam or mam-audible, include the MAM session ID||
+|  --no-opf            |If provided, skips OPF creation||
+|  --no-cache           |If provided, skips caching||
+|  --multibook           |If provided, assumes each file is a book||
 
 
 ### Examples and Use Cases
