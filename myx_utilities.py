@@ -53,7 +53,9 @@ def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     if stripaccents:
         stdTitle = strip_accents(stdTitle)
 
-    return stdTitle
+    # remove any subtitle that goes after a :
+    
+    return stdTitle.split(":")[0]
 
 def standardizeAuthors(mediaPath, dryRun=False):
     #get all authors from the source path
@@ -97,7 +99,7 @@ def optimizeKeys(keywords, delim=" "):
                 #if it's numeric like 02, make it an actual digit
                 if (not j.isdigit()):
                     #remove any articles like a, i, the
-                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks"])):
+                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks", "book", "part"])):
                         #print(f"Adding {j.lower()}")
                         kw.append(j.lower())
 
@@ -267,7 +269,7 @@ def removeGA (author:str):
 
 def cleanseSeries(series):
     #remove colons
-    cleanSeries = series.replace(":", "")
+    cleanSeries = series.replace(":", "").replace("'","")
     return cleanSeries.strip()
 
 
@@ -331,10 +333,9 @@ def createOPF(book, path):
     #     template = re.sub(r"__SERIES__", "", template)
     #     template = re.sub(r"__SERIESPART__", "", template)
 
-    if (not myx_args.params.dry_run):
-        opfFile=os.path.join(path, "metadata.opf")
-        with open(opfFile, mode='w', encoding='utf-8') as file:
-            file.write(template)
+    opfFile=os.path.join(path, "metadata.opf")
+    with open(opfFile, mode='w', encoding='utf-8') as file:
+        file.write(template)
 
     return
 
@@ -342,28 +343,37 @@ def getHash(key):
     return hashlib.sha256(key.encode(encoding="utf-8")).hexdigest()
 
 def isCached(key, category):
-    #Check if this book's hashkey exists in the cache, if so - it's been processed
-    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
-    found = os.path.exists(bookFile)  
-    #print(f"Checking if {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}\n\tCached: {found}")
-    return found      
+    if (myx_args.params.no_cache):
+        return False
+    else:
+        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+        found = os.path.exists(bookFile)  
+        #print(f"Checking if {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}\n\tCached: {found}")
+        return found      
     
 def cacheMe(key, category, content):
-    #Check if this book's hashkey exists in the cache, if so - it's been processed
-    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
-    with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
-        file.write(json.dumps(content))
-        #pprint(content, file)
+    if (myx_args.params.no_cache):
+        return False
+    else:    
+        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+        with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
+            file.write(json.dumps(content))
+            #pprint(content, file)
     
-    #print(f"Caching {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}")
-    return os.path.exists(bookFile)        
+        #print(f"Caching {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}")
+        return os.path.exists(bookFile)        
 
 def loadFromCache(key, category):
-    #print (f"Loading {key} from {category} cache...")
-    #Check if this book's hashkey exists in the cache, if so - it's been processed
-    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
-    with open(bookFile, mode='r', encoding='utf-8') as file:
-        f = file.read()
-    
-    #print(f"Retrieving {self.name} with hashKey {self.getHashKey()} from cache\n\tFile: {bookFile}")
-    return json.loads(f)
+    if (myx_args.params.no_cache):
+        return None
+    else:    
+        #print (f"Loading {key} from {category} cache...")
+        #Check if this book's hashkey exists in the cache, if so - it's been processed
+        bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+        with open(bookFile, mode='r', encoding='utf-8') as file:
+            f = file.read()
+        
+        #print(f"Retrieving {self.name} with hashKey {self.getHashKey()} from cache\n\tFile: {bookFile}")
+        return json.loads(f)

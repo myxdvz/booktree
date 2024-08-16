@@ -7,13 +7,15 @@ import myx_classes
 import myx_args
 
 def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords=""):
-
     if myx_args.params.verbose:
         print (f"getAudibleBook\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
 
     enBooks=[]
     cacheKey = myx_utilities.getHash(f"{asin}{title}{authors}{narrators}{keywords}")
     if myx_utilities.isCached(cacheKey, "audible"):
+        if myx_args.params.verbose:
+            print (f"Retrieving {cacheKey} from audible")
+
         #this search has been done before, retrieve the results
         books = myx_utilities.loadFromCache(cacheKey, "audible")
 
@@ -32,6 +34,7 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
                     "author": authors,
                     "narrator": narrators,
                     "keywords": keywords,
+                    "products_sort_by": "Relevance",
                     "response_groups": (
                         "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
                     )
@@ -44,7 +47,9 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
             #cache this results
             myx_utilities.cacheMe(cacheKey, "audible", books)
 
-            #pprint(books)
+            if myx_args.params.verbose:
+                pprint(books)
+
         except Exception as e:
                 print(f"Error searching audible: {e}")
 

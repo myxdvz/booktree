@@ -24,7 +24,9 @@ def importArgs():
     #verbose
     parser.add_argument("--verbose", default=False, action="store_true", help="Level of prints on the screen")
     #OPf file?
-    parser.add_argument("--opf", default=False, action="store_true", help="If provided, creates OPF file")
+    parser.add_argument("--no-opf", default=False, action="store_true", help="If provided, skips OPF file")
+    parser.add_argument("--no-cache", default=False, action="store_true", help="If provided, skips caching")
+    parser.add_argument("--multibook", default=False, action="store_true", help="If provided, assume this is a multibook collection, bypass the check")
 
     #get all arguments
     args = parser.parse_args()

@@ -85,13 +85,15 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
         for b in book.keys():
             #try and match again, the assumption, is that the log has the right information
             #TODO: Check if the file has been processed before, if so skip
-            if (book[b].metadata != "as-is") and (not book[b].isCached("book")):
+            if (book[b].metadata != "as-is"): # and (not book[b].isCached("book")):
                 print(f"Processing: {book[b].name}...")
                 #if it's not Matched, match it
                 if ((book[b].bestMAMMatch is None) and (book[b].bestAudibleMatch is None)):
                     #Search MAM record
                     bf = book[b].files[0]
-                    book[b].getMAMBooks(myx_args.params.session, bf)
+                    
+                    #log mode bypasses MAM because the user is already fixing the id3 directly
+                    #book[b].getMAMBooks(myx_args.params.session, bf)
 
                     #Search Audible using the provided id3 metadata in the input file
                     book[b].getAudibleBooks(httpx)
@@ -170,8 +172,8 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             print ("Adding {}\nParent:{}".format(bf.fullPath,bf.getParentFolder()))
 
         #create dictionary using book (assumed to be the the parent Folder) as the key
-        #if there's no parent folder, then the filename is the key
-        if bf.hasNoParentFolder():
+        #if there's no parent folder or if multibook is on, then the filename is the key
+        if ((myx_args.params.multibook) or (bf.hasNoParentFolder())):
             key=bf.getFileName()
         else:
             key=bf.getParentFolder()
@@ -185,40 +187,52 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             #New MAMBook file has a name, a file and a ffprobeBook
             book[hashKey]=myx_classes.MAMBook(key)
             book[hashKey].ffprobeBook=bf.ffprobeBook
-            book[hashKey].isSingleFile=bf.hasNoParentFolder()
+            book[hashKey].isSingleFile=(myx_args.params.multibook) or (bf.hasNoParentFolder())
             book[hashKey].files.append(bf)
 
-    for b in book.keys():
-        #if this is a multifile book
-        if len(book[b].files) > 1:
-            # newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
-            # if (isMultiBookCollection):
-            #     book[b].isMultiBookCollection=True
-            #     multiBookCollections.append(book)
-            #     if myx_args.params.verbose:
-            #         print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
+    #we don't know this is multi-book, make this determination (will be slow)
+    if (not myx_args.params.multibook):
+        for b in book.keys():
+            #if this is a multifile book
+            if len(book[b].files) > 1:
+                newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
+                if (isMultiBookCollection):
+                    book[b].isMultiBookCollection=True
+                    multiBookCollections.append(book[b])
+                    if myx_args.params.verbose:
+                        print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
+                else:
+                    book[b].isMultiFileBook=True
+                    multiFileCollections.append(book[b])
+                    if myx_args.params.verbose:
+                        print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
+            else:
+                #single file books
+                if myx_args.params.verbose:
+                    print (f"{book[b].name} is a single file book")
 
-            #     if myx_args.params.verbose:
-            #         for b in newBooks:
-            #             print(b.name)
-            #             for f in b.files:
-            #                 print (f.file)
-            #         #pprint (newBooks)
-            # else:
-            book[b].isMultiFileBook=True
-            multiFileCollections.append(book)
-            if myx_args.params.verbose:
-                print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
-        else:
-            #single file books
-            if myx_args.params.verbose:
-                print (f"{book[b].name} is a single file book")
-
+        #add books from multi-book collections
+        for mbc in multiBookCollections:
+            print (f"NewBook: {mbc.name}  Files: {len(mbc.files)}")
+            #for multi-book collection, each file IS a book
+            for f in mbc.files:
+                print (f"Adding {f.file} as a new book")
+                key=str(os.path.basename(f.file)) 
+                hashKey=myx_utilities.getHash(key)
+                book[hashKey]=myx_classes.MAMBook(key)
+                #multi book collection titles are almost always bad, so don't even try to use it for search
+                f.ffprobeBook.title=""
+                book[hashKey].ffprobeBook=f.ffprobeBook
+                book[hashKey].isSingleFile=True
+                book[hashKey].files.append(f)
 
     #for multi-file folders/book - check if there are any multi-book collections
-    normalCount = len(book) - len(multiFileCollections) - len(multiBookCollections)
-    print(f"\n\nCategorized {len(allFiles)} files into {normalCount} normal books, {len(multiFileCollections)} multi-file books and {len(multiBookCollections)} multi-book collections")
-    myx_utilities.printDivider()
+    if myx_args.params.multibook:
+        print(f"\n\nCategorized {len(allFiles)} files into books - multibook is on")
+    else:
+        normalCount = len(book) - len(multiFileCollections) - len(multiBookCollections)
+        print(f"\n\nCategorized {len(allFiles)} files into {normalCount} normal books, {len(multiFileCollections)} multi-file books and {len(multiBookCollections)} multi-book collections")
+        myx_utilities.printDivider()
 
     #OK, now that you have categorized the files, we can start processing them
     #At this point all Book files should have already been probed
@@ -227,6 +241,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     # auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
 
     #Find Book Matches from MAM and Audible
+    print(f"\n\nPreparing to process {len(book)} books...")
     for b in book.keys():    
         #if this book has not been processed before AND it is not a multibook collection
         #print (f"Book: {b} isCached: {book[b].isCached('book')}")
@@ -271,9 +286,6 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
         else:
             print(f"Skipping: {book[b].name}...")
         
-    #disconnect
-    # myx_audible.audibleDisconnect(auth)
-
     #Create Hardlinks
     print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
     for mb in matchedFiles:
@@ -318,7 +330,7 @@ if __name__ == "__main__":
         myx_args.params = myx_args.importArgs()
 
         #set
-        #pprint(args)
+        #pprint(myx_args.params)
         #myx_args.params.verbose=True
 
         #start the program

@@ -6,6 +6,9 @@ from pprint import pprint
 import json
 import posixpath
 import math
+import httpx
+import itertools
+from itertools import permutations 
 import myx_utilities
 import myx_audible
 import myx_args
@@ -63,7 +66,7 @@ class Book:
     
     def getCleanTitle(self):
         #Removes (Unabdridged from the title)
-        return self.title.replace (" (Unabridged)","")
+        return myx_utilities.cleanseTitle(self.title, True, True)
     
     def getAuthors(self, delimiter=",", encloser="", stripaccents=True):
         if len(self.authors):
@@ -240,7 +243,7 @@ class BookFile:
             return book
         else:
             return None
-        
+    
     def matchBook(self, client, matchRate=75):
         #given book file, ffprobe and audiblematches, return the best match
         parent = myx_utilities.getParentFolder(self.fullPath,self.sourcePath).replace(" (Unabridged)", "")
@@ -413,9 +416,9 @@ class BookFile:
 
             #Does this book belong in a series?
             if (len(book.series) > 0):
-                paths.append(os.path.join(stdAuthor, book.series[0].name, f"{book.series[0].getSeriesPart()} - {book.title}"))
+                paths.append(os.path.join(stdAuthor, myx_utilities.cleanseSeries(book.series[0].name), f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}"))
             else:
-                paths.append(os.path.join(stdAuthor, book.title))
+                paths.append(os.path.join(stdAuthor, myx_utilities.cleanseTitle(book.title)))
 
         return paths  
     
@@ -451,7 +454,7 @@ class MAMBook:
         #add all the duration of the files in the book, and convert into minutes
         duration:float=0
         for f in self.files:
-            duration += f.ffprobeBook.duration
+            duration += float(f.ffprobeBook.duration)
 
         return math.floor(duration/60)
 
@@ -507,9 +510,10 @@ class MAMBook:
 
         #Does this book belong in a series?
         if (len(series) > 0):
-            paths.append(os.path.join(stdAuthor, series[0].name, f"{series[0].getSeriesPart()} - {title}"))
+            paths.append(os.path.join(stdAuthor, myx_utilities.cleanseSeries(series[0].name), 
+                                      f"{myx_utilities.cleanseSeries(series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(title)}"))
         else:
-            paths.append(os.path.join(stdAuthor, title))
+            paths.append(os.path.join(stdAuthor, myx_utilities.cleanseTitle(title)))
 
         return paths  
 
@@ -530,12 +534,26 @@ class MAMBook:
         #pprint(book)
         
         keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+                                            myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" ")),
                                             myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)])
-        print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tkeywords:{keywords}")
-        #search each author until a match is found
-        for author in book.authors:
-            sAuthor=myx_utilities.cleanseAuthor(author.name)
-            books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, keywords=keywords)
+        print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
+        
+        #generate author, narrator combo
+        author_narrator=[]
+        for i in range(len(book.authors)):
+            if len(book.narrators):
+                for j in range(len(book.narrators)):
+                    author_narrator.append((book.authors[i].name, book.narrators[j].name))
+            else:
+                    author_narrator.append((book.authors[i].name, ""))
+
+        #print (author_narrator)
+
+        for an in author_narrator:
+            #print (f"Author: {an[0]}\tNarrator: {an[1]}")
+            sAuthor=myx_utilities.cleanseAuthor(an[0])
+            sNarrator=myx_utilities.cleanseAuthor(an[1])
+            books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords)
 
             #book found, exit for loop
             if ((books is not None) and len(books)):
@@ -553,32 +571,48 @@ class MAMBook:
                 #find an exact duration match
                 found=False
                 #print (f"Finding exact duration match {self.getRunTimeLength()}")
-                for product in books:
-                    book=myx_audible.product2Book(product)
-                    #print (f"\n\t{book.asin}: {book.length}")
-                    if (abs(self.getRunTimeLength() - book.length) <= 3):
-                        #print (f"Exact Match Found, {book.asin} : {book.length}")
-                        found=True
-                        self.bestAudibleMatch=book
-                        book.matchRate=100
+                # for product in books:
+                #     abook=myx_audible.product2Book(product)
+                #     #print (f"\n\t{book.asin}: {book.length}")
+                #     if (abs(self.getRunTimeLength() - abook.length) <= 3):
+                #         #print (f"Exact Match Found, {book.asin} : {book.length}")
+                #         found=True
+                #         self.bestAudibleMatch=abook
+                #         abook.matchRate=100
 
-                #if an exact duration match was not found, do fuzzy match        
-                mamBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
+                # Because the Audible search is sorted by relevance, we assume that the top search is the best match 
+                mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
+                # abook=myx_audible.product2Book(books[0])
+                # audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                # matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
+                # abook.matchRate=matchRate
+                # self.bestAudibleMatch=abook
+                            
                 bestMatchRate=0
                 if (not found):
                     #print (f"Didn't find exact duration match.. using fuzzymatch")
                     for product in books:
-                        book=myx_audible.product2Book(product)
+                        abook=myx_audible.product2Book(product)
                         #print (f"Fuzzy Match {str(book)}")
-                        audibleBook = '|'.join([book.getCleanTitle(), book.getAuthors(), book.getSeriesParts()])
+                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
                         matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
-                        book.matchRate=matchRate
+                        abook.matchRate=matchRate
+                        print(f"Match Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}")
 
-                        #is this better?
+                        #is this better and the duration is within 3 minutes
                         if (matchRate > bestMatchRate):
-                            bestMatchRate=matchRate
-                            self.bestAudibleMatch=book
-
+                            #default to the first record, because results are sorted by relevance
+                            if (not found):
+                                bestMatchRate=matchRate
+                                self.bestAudibleMatch=abook
+                                found=True
+                            else:
+                                #something was found before, so only update it, if the match is better AND the duration is a better match
+                                #note: this logic is flawed if the book is split into multiple files
+                                if (abs(self.getRunTimeLength() - abook.length) <= 3):
+                                    bestMatchRate=matchRate
+                                    self.bestAudibleMatch=abook
+            
             else:
                 #the only match is the best match
                 if ((books is not None) and (len(books) == 1)):
@@ -620,7 +654,7 @@ class MAMBook:
                         if myx_args.params.verbose:
                             print (f"Generating OPF file ...")
 
-                    if (myx_args.params.opf):
+                    if ((not dryRun) and (not myx_args.params.no_opf)):
                         self.metadataBook.createOPF(p)
                 
                 if myx_args.params.verbose:
@@ -718,7 +752,5 @@ class MAMBook:
         
     def loadFromCache(self, category):
         return myx_utilities.loadFromCache(self.getHashKey(), category)
-        
-    
 
 
