@@ -47,8 +47,8 @@ def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     #remove (Unabridged) and strip accents
     stdTitle=title
 
-    if stripUnabridged:
-        stdTitle = stdTitle.replace(" (Unabridged)", "").replace("m4b","")
+    for w in [" (Unabridged)", "m4b", "mp3"]:
+        stdTitle=stdTitle.replace(w,"")
     
     if stripaccents:
         stdTitle = strip_accents(stdTitle)
@@ -73,10 +73,13 @@ def standardizeAuthors(mediaPath, dryRun=False):
                         print ("Can't rename {}: {}".format(f, e))
 
 def fuzzymatch(x:str, y:str):
+    newX = x
+    newY = y
     #remove .:_-, for fuzzymatch
-    symbols=".:_-'[]"
-    newX=x.replace(symbols, "")
-    newY=y.replace(symbols, "")
+    for c in [".", ":", "_", "-", "[", "]", "'"]:
+        newX = newX.replace (c, "")
+        newY = newY.replace (c, "")
+
     if (len(newX) and len(newY)):
         newZ=fuzz.token_sort_ratio(newX, newY)
         #print ("{} Fuzzy Match {}={}".format(newZ, newX, newY))
@@ -88,7 +91,9 @@ def optimizeKeys(keywords, delim=" "):
     #keywords is a list of stuff, we want to convert it in a comma delimited string
     kw=[]
     for k in keywords:
-        k=k.replace("["," ").replace("]"," ").replace("{"," ").replace("}"," ").replace(".", " ").replace("_", " ").replace("("," ").replace(")"," ").replace(":"," ").replace(","," ").replace(";", " ")
+        for c in [".", ":", "_", "[", "]", "'", "{", "}", ",", ";"]:
+            k = k.replace(c, " ")
+
         #print(k)
         #parse this item "-"
         for i in k.split("-"):
@@ -99,9 +104,10 @@ def optimizeKeys(keywords, delim=" "):
                 #if it's numeric like 02, make it an actual digit
                 if (not j.isdigit()):
                     #remove any articles like a, i, the
-                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks", "book", "part"])):
+                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks", "book", "part", "track"])):
                         #print(f"Adding {j.lower()}")
-                        kw.append(j.lower())
+                        if not (re.search ("cd\s?\d+", j, re.IGNORECASE) or  re.search ("disc\s?\d+", j, re.IGNORECASE)):
+                            kw.append(j.lower())
 
     #now return comma delimited string
     return delim.join(kw)
@@ -269,7 +275,10 @@ def removeGA (author:str):
 
 def cleanseSeries(series):
     #remove colons
-    cleanSeries = series.replace(":", "").replace("'","")
+    cleanSeries = series
+    for c in [":", "'", "-"]:
+        cleanSeries = cleanSeries.replace (c, "")
+
     return cleanSeries.strip()
 
 

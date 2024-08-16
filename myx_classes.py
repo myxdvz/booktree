@@ -417,7 +417,7 @@ class BookFile:
 
             #is this a MultiCd file?
             disc = self.getParentFolder()
-            print (f"File: {self.file}\nParent: {disc}")
+            #print (f"File: {self.file}\nParent: {disc}")
 
             if (not myx_utilities.isMultiCD(disc)):
                 disc = ""
@@ -537,7 +537,7 @@ class MAMBook:
 
         books=[]
         #Search Audible using either MAM (better) or ffprobe metadata
-        if (self.bestMAMMatch is not None):
+        if (not myx_args.params.multibook) and (self.bestMAMMatch is not None):
             book = self.bestMAMMatch
             title = book.getCleanTitle()
         else:
@@ -549,9 +549,10 @@ class MAMBook:
 
         #pprint(book)
         
-        keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
-                                            myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" ")),
-                                            myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)])
+        keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" ")),
+                                            myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True),
+                                            myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+                                            myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" "))])
         print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
         
         #generate author, narrator combo
@@ -574,7 +575,15 @@ class MAMBook:
             #book found, exit for loop
             if ((books is not None) and len(books)):
                 break
-        
+            
+            #print (f"Nothing was found so just doing a keyword search {keywords}")
+            # too constraining?  try just a keywords search with all information
+            books=myx_audible.getAudibleBook (client, keywords=keywords)
+
+            #book found, exit for loop
+            if ((books is not None) and len(books)):
+                break
+
         self.audibleMatches=books
 
         #process search results
