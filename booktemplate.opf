@@ -10,7 +10,7 @@
     <dc:subtitle>__SUBTITLE__</dc:subtitle>
 __AUTHORS__
 __NARRATORS__    
-    <dc:language>eng</dc:language>
+    <dc:language>English</dc:language>
     <dc:identifier opf:scheme="ASIN">__ASIN__</dc:identifier>
 __SERIES__
     <dc:tag></dc:tag>
