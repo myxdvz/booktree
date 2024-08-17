@@ -112,6 +112,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                     #if matched, add to matchedFiles
                     if book[b].isMatched():
                         matchedFiles.append(book[b])
+                        
                     else:
                         unmatchedFiles.append(book[b])
 
@@ -124,7 +125,11 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
         # #Create Hardlinks
         print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
         for mb in matchedFiles:
-            mb.createHardLinks(mediaPath,dryRun)        
+            mb.createHardLinks(mediaPath,dryRun)       
+
+            #cache this book - unless it's a dry run
+            if (not dryRun):
+                mb.cacheMe("book", str(book[b]))             
         
         #Logging processed files
         print (f"\nLogging {len(allFiles)} processed books")
@@ -286,9 +291,6 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             if myx_args.params.verbose:
                 pprint(book[b])
 
-            #cache this book - unless it's a dry run
-            if (not dryRun):
-                book[b].cacheMe("book", str(book[b]))
         else:
             print(f"Skipping: {book[b].name}...")
         
@@ -296,6 +298,10 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
     for mb in matchedFiles:
         mb.createHardLinks(mediaPath,dryRun)
+
+        #cache this book - unless it's a dry run
+        if (not dryRun):
+            mb.cacheMe("book", str(book[b]))
 
     #Logging processed files
     print (f"\nLogging {len(normalBooks)} processed books")

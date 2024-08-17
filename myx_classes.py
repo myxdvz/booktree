@@ -102,9 +102,11 @@ class Book:
 
     def setSeries(self, series):
         #Given a csv of authors, convert it to a list
+        print (f"Parsing series {series}")
         if len(series.strip()):
             for s in list([series]):
                 p = s.split("#")
+                print (f"Series: {s}\nSplit: {p}")
                 if len(p) > 1: 
                     self.series.append(Series(str(p[0]).strip(), str(p[1]).strip()))
                 else:
@@ -668,7 +670,7 @@ class MAMBook:
                 for p in f.getTargetPaths(self.metadataBook):
                     if (not dryRun):
                         #hardlink the file
-                        p = os.path.join(targetFolder,myx_utilities.cleanseSeries(p))
+                        p = os.path.join(targetFolder, p)
                         if myx_args.params.verbose:
                             print (f"Hardlinking {f.fullPath} to {p}")
 
