@@ -102,11 +102,11 @@ class Book:
 
     def setSeries(self, series):
         #Given a csv of authors, convert it to a list
-        print (f"Parsing series {series}")
+        #print (f"Parsing series {series}")
         if len(series.strip()):
             for s in list([series]):
                 p = s.split("#")
-                print (f"Series: {s}\nSplit: {p}")
+                #print (f"Series: {s}\nSplit: {p}")
                 if len(p) > 1: 
                     self.series.append(Series(str(p[0]).strip(), str(p[1]).strip()))
                 else:
