@@ -385,28 +385,33 @@ class BookFile:
                         self.isMatched=True
                         self.audibleMatch=bestMatchedBook
                         print ("{} Match found: {}".format(bestMatchRatio, bestMatchedBook.title))
- 
-    def hardlinkFile(self, source, target):
-        #add target to base Media folder
-        destination = os.path.join(myx_args.params.media_path, target)
-        #check if the target path exists
-        if (not os.path.exists(destination)):
-            #make dir path
-            print ("Creating target directory ", destination)
-            os.makedirs(destination, exist_ok=True)
-        
+
+    def hardlinkFile(self, source, target, dryRun=False):
+        prefix = ""
+        if dryRun:
+            prefix = "(Dry-run=true) - "
+        #check if the target directory exists
+        dir = os.path.dirname(target)
+        if not os.path.exists(dir):
+            print(f"{prefix}Creating target directory {dir}")
+            if not dryRun:
+                os.makedirs(dir, exist_ok=True)
+
         #check if the file already exists in the target directory
-        filename=os.path.join(destination, os.path.basename(source).split('/')[-1])
-        if (not os.path.exists(filename)):
-            print ("Hardlinking {} to {}".format(source, filename))
-            try:
-                os.link(source, filename)
-                self.isHardlinked=True
-            except Exception as e:
-                print ("Failed to hardlink {} to {} due to:".format(source, filename, e))
+        if not os.path.exists(target):
+            print(f"{prefix}Hardlinking {source} to {target}")
+
+            if not dryRun:
+                try:
+                    os.link(source, target)
+                    self.isHardlinked=True
+                except Exception as e:
+                    print(f"Failed to hardlink {source} to {target} due to: {e}")
+        else:
+            print(f"{source} already exists at {target}")
 
         return self.isHardlinked
-    
+
     def getTargetPaths(self, book):
         paths=[]
         if (book is not None):
@@ -675,7 +680,6 @@ class MAMBook:
             return 0
         
     def createHardLinks(self, targetFolder, dryRun=False):
-
         if (self.metadata == "audible"):
             self.metadataBook=self.bestAudibleMatch
         elif (self.metadata == "mam"):
@@ -691,21 +695,19 @@ class MAMBook:
             for f in self.files:
                 #if a book belongs to multiple series, only use the first one                
                 for p in f.getTargetPaths(self.metadataBook):
-                    if (not dryRun):
-                        #hardlink the file
-                        p = os.path.join(targetFolder, p)
-                        if myx_args.params.verbose:
-                            print (f"Hardlinking {f.fullPath} to {p}")
+                    #hardlink the file
+                    destDir = os.path.join(targetFolder, p)
+                    filename = os.path.basename(f.fullPath).split('/')[-1]
+                    dest = os.path.join(destDir, filename)
+                    f.hardlinkFile(f.fullPath, dest, dryRun=dryRun)
+                    f.isHardLinked=True
 
-                        f.hardlinkFile(f.fullPath, p)                   
-                        f.isHardLinked=True
-
-                        #generate the OPF file
-                        if myx_args.params.verbose:
-                            print (f"Generating OPF file ...")
+                    #generate the OPF file
+                    if myx_args.params.verbose:
+                        print (f"Generating OPF file ...")
 
                     if ((not dryRun) and (not myx_args.params.no_opf)):
-                        self.metadataBook.createOPF(p)
+                        self.metadataBook.createOPF(destDir)
                 
                 if myx_args.params.verbose:
                     myx_utilities.printDivider()

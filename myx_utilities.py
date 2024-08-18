@@ -135,24 +135,6 @@ def strip_accents(s):
     return ''.join(c for c in unicodedata.normalize('NFD', s)
                     if unicodedata.category(c) != 'Mn')
 
-def createHardLinks(bookFiles, targetFolder="", dryRun=False):
-    #hard link all the books in the list
-    for f in bookFiles:
-        #use Audible metadata or ID3 metadata
-        if f.isMatched:
-            book=f.audibleMatch
-        else:
-            book=f.ffprobeBook
-
-        #if there is a book
-        if (book is not None):
-            #if a book belongs to multiple series, hardlink them to tall series
-            for p in f.getTargetPaths(book):
-                if (not dryRun):
-                    f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
-                #print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
-            print("\n", 40 * "-", "\n")
-
 def logBookRecords(logFilePath, bookFiles):
 
     write_headers = not os.path.exists(logFilePath)
@@ -309,7 +291,7 @@ def getLogHeaders():
                     
     return dict.fromkeys(headers)
 
-def createOPF(book, path):
+def createOPF(book, directory):
     # --- Generate .opf Metadata file ---
     opfTemplate=os.path.join(os.getcwd(), "booktemplate.opf") 
     with open(opfTemplate, mode='r') as file:
@@ -350,7 +332,7 @@ def createOPF(book, path):
     #     template = re.sub(r"__SERIES__", "", template)
     #     template = re.sub(r"__SERIESPART__", "", template)
 
-    opfFile=os.path.join(path, "metadata.opf")
+    opfFile=os.path.join(directory, "metadata.opf")
     with open(opfFile, mode='w', encoding='utf-8') as file:
         file.write(template)
 
