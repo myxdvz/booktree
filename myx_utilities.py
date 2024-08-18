@@ -276,7 +276,7 @@ def removeGA (author:str):
 def cleanseSeries(series):
     #remove colons
     cleanSeries = series
-    for c in [":", "'", "-"]:
+    for c in [":", "'"]:
         cleanSeries = cleanSeries.replace (c, "")
 
     return cleanSeries.strip()
@@ -389,3 +389,23 @@ def loadFromCache(key, category):
     
 def isMultiCD(parent):
     return re.search("disc\s?\d+", parent.lower()) or re.search("cd\s?\d+", parent.lower())
+
+def isThisMyAuthorsBook (authors, book):
+    if myx_args.params.verbose:
+        print (f"Checking if {book.title} is {authors}'s book: {book.authors}")
+    found=False
+    for author in authors:
+        if author.name in book.getAuthors():
+            found=True
+            break
+    return found
+
+def isThisMyBookTitle (title, book, matchrate=0):
+    mytitle = cleanseTitle(title)
+    thisTitle = cleanseTitle(book.title)
+    
+    match = fuzzymatch(mytitle, thisTitle)
+    if myx_args.params.verbose:
+        print (f"Checking if {book.title} matches my book {title}: {match}")
+    return  match >= matchrate
+    

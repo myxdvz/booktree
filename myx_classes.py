@@ -97,7 +97,7 @@ class Book:
     def setAuthors(self, authors):
         #Given a csv of authors, convert it to a list
         if len(authors.strip()):
-            for author in list([authors]):
+            for author in authors.split (","):
                 self.authors.append(Contributor(author))
 
     def setSeries(self, series):
@@ -391,7 +391,7 @@ class BookFile:
         if (not os.path.exists(destination)):
             #make dir path
             print ("Creating target directory ", destination)
-            os.makedirs(destination)
+            os.makedirs(destination, exist_ok=True)
         
         #check if the file already exists in the target directory
         filename=os.path.join(destination, os.path.basename(source).split('/')[-1])
@@ -587,16 +587,17 @@ class MAMBook:
                 break
 
         self.audibleMatches=books
+        # Because the Audible search is sorted by relevance, we assume that the top search is the best match  
+        mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
 
         #process search results
         if (self.audibleMatches is not None):
             if (myx_args.params.verbose):
                     print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
 
-            if (len(self.audibleMatches) > 1):
+            #if (len(self.audibleMatches) > 1):
                 #find the best match
                 #find an exact duration match
-                found=False
                 #print (f"Finding exact duration match {self.getRunTimeLength()}")
                 # for product in books:
                 #     abook=myx_audible.product2Book(product)
@@ -607,43 +608,57 @@ class MAMBook:
                 #         self.bestAudibleMatch=abook
                 #         abook.matchRate=100
 
-                # Because the Audible search is sorted by relevance, we assume that the top search is the best match 
-                mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
                 # abook=myx_audible.product2Book(books[0])
                 # audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
                 # matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
                 # abook.matchRate=matchRate
                 # self.bestAudibleMatch=abook
                             
-                bestMatchRate=0
-                if (not found):
-                    #print (f"Didn't find exact duration match.. using fuzzymatch")
-                    for product in books:
-                        abook=myx_audible.product2Book(product)
-                        #print (f"Fuzzy Match {str(book)}")
-                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
-                        abook.matchRate=matchRate
-                        #print(f"Match Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}")
+            bestMatchRate=0
+            #find the best match
+            for product in books:
+                abook=myx_audible.product2Book(product)
+                if myx_utilities.isThisMyAuthorsBook(book.authors, abook) and myx_utilities.isThisMyBookTitle(book.title, abook, myx_args.params.matchrate):
+                    #include this book in the comparison
+                    audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
+                    matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
+                    abook.matchRate=matchRate
 
-                        #is this better and the duration is within 3 minutes
-                        if (matchRate > bestMatchRate):
-                            #default to the first record, because results are sorted by relevance
-                            if (not found):
-                                bestMatchRate=matchRate
-                                self.bestAudibleMatch=abook
-                                found=True
-                            else:
-                                #something was found before, so only update it, if the match is better AND the duration is a better match
-                                #note: this logic is flawed if the book is split into multiple files
-                                if (abs(self.getRunTimeLength() - abook.length) <= 3):
-                                    bestMatchRate=matchRate
-                                    self.bestAudibleMatch=abook
+                    if myx_args.params.verbose:
+                        print(f"Match Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}")
+                    
+                    if (matchRate > bestMatchRate):
+                        bestMatchRate=matchRate
+                        self.bestAudibleMatch=abook
+
+                    # #print (f"Fuzzy Match {str(book)}")
+                    # audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
+                    # matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
+                    # abook.matchRate=matchRate
+                    # #print(f"Match Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}")
+
+                    # #is this better and the duration is within 3 minutes
+                    # if (matchRate > bestMatchRate) and (matchRate >= myx_args.params.matchrate):
+                    #     #default to the first record, because results are sorted by relevance
+                    #     if (not found):
+                    #         #if the first result is not even from this author, assume there are no results
+                    #         bestMatchRate=matchRate
+                    #         self.bestAudibleMatch=abook
+                    #         found=True
+                    #     else:
+                    #         #something was found before, so only update it, if the match is better AND the duration is a better match
+                    #         #note: this logic is flawed if the book is split into multiple files
+                    #         if (not myx_args.params.multibook) and (abs(self.getRunTimeLength() - abook.length) <= 3):
+                    #             bestMatchRate=matchRate
+                    #             self.bestAudibleMatch=abook
+                    #             found=True
             
-            else:
-                #the only match is the best match
-                if ((books is not None) and (len(books) == 1)):
-                    self.bestAudibleMatch=myx_audible.product2Book(books[0])
+            # else:
+            #     if ((books is not None) and (len(books) == 1)):
+            #         #the only match is the best match -- or not
+            #         abook=myx_audible.product2Book(books[0])
+            #         if myx_utilities.isThisMyAuthorsBook(book.authors, abook):
+            #             self.bestAudibleMatch=abook
 
         #pprint(self.bestAudibleMatch)
         if (books is not None):             

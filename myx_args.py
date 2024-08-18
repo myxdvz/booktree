@@ -21,6 +21,7 @@ def importArgs():
     #medata source (audible|mam|id3|log)
     parser.add_argument("metadata", choices=["audible","mam","mam-audible","log"], default="mam-audible", help="Source of the metada: (audible, mam, mam-audible)")
     parser.add_argument("--session", default="", help="Your session cookie")
+    parser.add_argument("--matchrate", default=60, help="minimum acceptable fuzzy match rate")
     #verbose
     parser.add_argument("--verbose", default=False, action="store_true", help="Level of prints on the screen")
     #OPf file?
