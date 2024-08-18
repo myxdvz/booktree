@@ -55,22 +55,22 @@ positional arguments:
                         Source of the metada: (audible, mam, mam-audible)
 
 options:
-  -h, --help            show this help message and exit
-  --file FILE           The file or files(s) you want to process. Accepts * and ?. Defaults to *.m4b
+  -h, --help                  show this help message and exit
+  --file FILE                 The file or files(s) you want to process. Accepts * and ?. Defaults to *.m4b
   --source_path SOURCE_PATH
-                        Where your unorganized files are
+                              Where your unorganized files are
   --media_path MEDIA_PATH
-                        Where your organized files will be, i.e. your Audiobookshelf library
-  --log_path LOG_PATH   Where your log files will be
-  --session SESSION     Your session cookie
+                              Where your organized files will be, i.e. your Audiobookshelf library
+  --log_path LOG_PATH         Where your log files will be
+  --session SESSION           Your session cookie (if using mam or mam-audible)
   --matchrate MATCHRATE
-                        minimum acceptable fuzzy match rate
-  --dry-run             If provided, will only create log and not actually build the tree
-  --verbose             Level of prints on the screen
-  --no-opf              If provided, skips OPF file
-  --no-cache            If provided, skips caching
-  --multibook           If provided, assume this is a multibook collection, bypass the check
-  --fixid3              If provided, will attempt to fix id3 metadata
+                              Minimum acceptable fuzzy match rate. Defaults to 60
+  --dry-run                   If provided, will only create log and not actually build the tree
+  --verbose                   If provided, will print additional info
+  --no-opf                    If provided, skips OPF file
+  --no-cache                  If provided, skips caching
+  --multibook                 If provided, assume this is a multibook collection, bypass the check
+  --fixid3                    If provided, will attempt to fix id3 metadata
 ~~~
 
 ### Examples and Use Cases
