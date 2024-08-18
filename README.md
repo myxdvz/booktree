@@ -44,24 +44,34 @@ It does the following:
 
 ### Help and Examples
 ~~~
-usage: python booktree.py [-h] {mam|audible|mam-audible|log} [--file FILE] --source_path SOURCE_PATH --media_path MEDIA_PATH [--log_path LOG_PATH] [--dry-run] [--verbose] [--session]
+usage: booktree [-h] [--file FILE] [--source_path SOURCE_PATH] --media_path MEDIA_PATH [--log_path LOG_PATH] [--session SESSION]
+                [--matchrate MATCHRATE] [--dry-run] [--verbose] [--no-opf] [--no-cache] [--multibook] [--fixid3]
+                {audible,mam,mam-audible,log}
+
+Reorganize your audiobooks using ID3 or Audbile metadata. The originals are untouched and will be hardlinked to their destination
+
+positional arguments:
+  {audible,mam,mam-audible,log}
+                        Source of the metada: (audible, mam, mam-audible)
+
+options:
+  -h, --help            show this help message and exit
+  --file FILE           The file or files(s) you want to process. Accepts * and ?. Defaults to *.m4b
+  --source_path SOURCE_PATH
+                        Where your unorganized files are
+  --media_path MEDIA_PATH
+                        Where your organized files will be, i.e. your Audiobookshelf library
+  --log_path LOG_PATH   Where your log files will be
+  --session SESSION     Your session cookie
+  --matchrate MATCHRATE
+                        minimum acceptable fuzzy match rate
+  --dry-run             If provided, will only create log and not actually build the tree
+  --verbose             Level of prints on the screen
+  --no-opf              If provided, skips OPF file
+  --no-cache            If provided, skips caching
+  --multibook           If provided, assume this is a multibook collection, bypass the check
+  --fixid3              If provided, will attempt to fix id3 metadata
 ~~~
-
-| Flag | Description | Default Value |
-| ----------- | ----------- | ----------- |
-|  -h, --help |           Show this help message and exit||
-|  {audible,mam,mam-audible,log} | Source of the metada: (mam, audible,log)|mam-audible|
-|  --file FILE            |The input file or for directory scan, the file(s) path/pattern you want to process.  Accepts * and ?|\*.m4b,*.mp3|
-|  --source_path SOURCE_PATH|Where your unorganized files are|Required|
-|  --media_path MEDIA_PATH|Where your organized files will be, i.e. your Audiobookshelf library|Required|
-|  --log_path LOG_PATH   |Where your log files will be|<booktree>/logs|
-|  --session | If using mam or mam-audible, include the MAM session ID||
-|  --dry-run             |If provided, will only create logfile and not actually build the tree||
-|  --verbose            |If provided, will display more debug information||
-|  --no-opf            |If provided, skips OPF creation||
-|  --no-cache           |If provided, skips caching||
-|  --multibook           |If provided, assumes each file is a book||
-
 
 ### Examples and Use Cases
 
