@@ -91,7 +91,7 @@ def optimizeKeys(keywords, delim=" "):
     #keywords is a list of stuff, we want to convert it in a comma delimited string
     kw=[]
     for k in keywords:
-        for c in [".", ":", "_", "[", "]", "'", "{", "}", ",", ";"]:
+        for c in [".", ":", "_", "[", "]", "'", "{", "}", ",", ";", "(", ")"]:
             k = k.replace(c, " ")
 
         #print(k)
@@ -416,3 +416,41 @@ def isThisMyBookTitle (title, book, matchrate=0):
 
     return  (matchname >= matchrate) or (matchseriesname >= matchrate)
     
+def getBookFromTag (id3Title, book):
+    #Examples:
+    # Dark-Hunter 23 - Styxx - Part 3		
+    # Belgarath the Sorcerer, Part 1
+    # The Seeress of Kell (Malloreon 5), Part 2
+    # Robert Ludlum - 2005 The Ambler Warning 004-End
+    #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
+    patterns = [
+        #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
+        "(?P<author>[a-zA-Z0-9'_\.\s]+)(?:-)?(?P<series>[a-zA-Z'_\.\s\']+)(?P<part>\d+)*(?P<title>[a-zA-Z'_\.\s]+)*(?:\d{4})+(?:\s)*(?:\d{3})(?:[a-zA-Z0-9'_\-\.]+)*",
+        #(Title) (Series), (Extra)
+        "(?P<title>[a-zA-Z0-9'_\.\s]+)((?:\()(?P<series>[a-zA-Z'_\.\s]+)(?P<part>\d+)*(?:\)))?(?:,)+(?:\s)+(?:Part[\s]?)(?:\d+)*",
+        #(Series) - (Title) - (Extra)
+        "(?P<series>[a-zA-Z'_\.\-\s]+)*(?P<part>\d)+(\s)?(?:-)(?P<title>[a-zA-Z'_\.\s]+)*(?:-)(?:[\s]?Part[\s]?)(?:\d+)*"
+    ]
+    found = False
+    for p in patterns:
+        print (f"Checking pattern {p}")
+        p = re.compile(p, re.IGNORECASE)
+        m = p.search(id3Title)
+        if m is not None:
+            #if myx_args.params.verbose:
+            gd = m.groupdict()
+            print (gd)
+            
+            if ("title" in gd) and m.group("title") is not None:
+                book.title = str(m.group("title")).strip()
+            if ("author" in gd) and m.group("author") is not None: 
+                book.setAuthors(str(m.group("author")).strip())
+            if ("series" in gd) and m.group("series") is not None:
+                book.series.append(myx_classes.Series(str(m.group("series")).strip(), str(m.group("part")).strip()))
+
+            found = True     
+
+        if found:
+            break               
+
+    return book

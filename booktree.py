@@ -338,12 +338,28 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(os.getcwd(), "__cache__", "mam"), exist_ok=True)
         os.makedirs(os.path.join(os.getcwd(), "__cache__", "audible"), exist_ok=True)
 
+        # test RE titles
+        # book=myx_classes.Book()
+        # myx_utilities.getBookFromTag("The Seeress of Kell (Malloreon 5), Part 2", book)
+        # print ("\n\n")
+
+        # myx_utilities.getBookFromTag("Polgara the Sorceress, Part 1", book)
+        # print ("\n\n")
+
+        # myx_utilities.getBookFromTag("Dark-Hunter 23 - Styxx - Part 3", book)
+        # print ("\n\n")
+
         #set
         #pprint(myx_args.params)
         #myx_args.params.verbose=True
 
         #start the program
         main()
+
+
+
+        
+
 
 
 

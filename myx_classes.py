@@ -182,24 +182,7 @@ class BookFile:
         return json.loads(out)
 
     def __getBookFromTag__ (self, id3Title, book):
-        #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
-        #reTitle = "([a-zA-Z0-9_\.\s]+)(-)([a-zA-Z0-9_\.\s]+)(\d+)(\s?)([a-zA-Z0-9_\.\-\s]+)(\d{1-4})([a-zA-Z0-9_\.\s]*)"
-        reTitle = "(?P<author>[a-zA-Z0-9_\.\s]+)(?:-)?(?P<series>[a-zA-Z_\.\s]+)(?P<part>\d+)*(?P<title>[a-zA-Z_\.\s]+)*(?:\d{4})+(?:\s)*(?:\d{3})(?:[a-zA-Z0-9_\-\.]+)*"
-        p = re.compile(reTitle, re.IGNORECASE)
-        m = p.search(id3Title)
-        if m is not None:
-            if myx_args.params.verbose:
-                print (m.groupdict())
-            
-            book.title = str(m.group("title")).strip()
-            book.setAuthors(str(m.group("author")).strip())
-            book.series.append(Series(str(m.group("series")).strip(), str(m.group("part")).strip()))
-            #pprint (book)                  
-
-        else:
-            print (f"Pattern not found: {book.title}")    
-
-        return book
+        return myx_utilities.getBookFromTag (id3Title, book)
     
     def ffprobe(self, parent):
         #ffprobe the file
@@ -611,7 +594,7 @@ class MAMBook:
 
         self.audibleMatches=books
         # Because the Audible search is sorted by relevance, we assume that the top search is the best match  
-        if myx_args.params.multibook:
+        if not myx_args.params.multibook:
             mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
         else:
             mamBook = '|'.join([book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
@@ -648,7 +631,7 @@ class MAMBook:
                 abook=myx_audible.product2Book(product)
                 if myx_utilities.isThisMyAuthorsBook(book.authors, abook) and myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate):
                     #include this book in the comparison
-                    if myx_args.params.multibook:
+                    if not myx_args.params.multibook:
                         audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
                     else:
                         audibleBook = '|'.join([abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
