@@ -145,7 +145,7 @@ def createHardLinks(bookFiles, targetFolder="", dryRun=False):
             for p in f.getTargetPaths(book):
                 if (not dryRun):
                     f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
-                print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
+                #print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
             print("\n", 40 * "-", "\n")
 
 def logBookRecords(logFilePath, bookFiles):
@@ -395,9 +395,13 @@ def isThisMyAuthorsBook (authors, book):
         print (f"Checking if {book.title} is {authors}'s book: {book.authors}")
     found=False
     for author in authors:
-        if author.name in book.getAuthors():
-            found=True
-            break
+        for bauthor in book.authors:
+            #print (f"Author: {author.name} = {bauthor.name}? {(author.name.replace(' ', '') == bauthor.name.replace(' ', ''))}")
+            if (author.name.replace(" ", "") == bauthor.name.replace(" ", "")):
+                #print ("found\n")
+                found=True
+                break
+
     return found
 
 def isThisMyBookTitle (title, book, matchrate=0):
@@ -425,21 +429,22 @@ def getBookFromTag (id3Title, book):
     #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
     patterns = [
         #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
-        "(?P<author>[a-zA-Z0-9'_\.\s]+)(?:-)?(?P<series>[a-zA-Z'_\.\s\']+)(?P<part>\d+)*(?P<title>[a-zA-Z'_\.\s]+)*(?:\d{4})+(?:\s)*(?:\d{3})(?:[a-zA-Z0-9'_\-\.]+)*",
+        "(?P<author>[a-zA-Z0-9'_\.\s]+)(?:-)?(?P<series>[a-zA-Z'_\.\s\']+)(?P<part>\d*[.]?\d*)?(?P<title>[a-zA-Z'_\.\s]+)*(?:\d{4})+(?:\s)*(?:\d{3})(?:[a-zA-Z0-9'_\-\.]+)*",
         #(Title) (Series), (Extra)
-        "(?P<title>[a-zA-Z0-9'_\.\s]+)((?:\()(?P<series>[a-zA-Z'_\.\s]+)(?P<part>\d+)*(?:\)))?(?:,)+(?:\s)+(?:Part[\s]?)(?:\d+)*",
+        "(?P<title>[a-zA-Z0-9'_\.\s]+)((?:\()(?P<series>[a-zA-Z'_\.\s]+)(?P<part>\d*[.]?\d*)?(?:\)))?(?:,)+(?:\s)+(?:Part[\s]?)(?:\d+)*",
         #(Series) - (Title) - (Extra)
-        "(?P<series>[a-zA-Z'_\.\-\s]+)*(?P<part>\d)+(\s)?(?:-)(?P<title>[a-zA-Z'_\.\s]+)*(?:-)(?:[\s]?Part[\s]?)(?:\d+)*"
+        "(?P<series>[a-zA-Z'_\.\-\s]+)*(?P<part>\d*[.]?\d*)?(\s)?(?:-)?(?P<title>[a-zA-Z'_\.\s]+)*((?:-)(?:[\s]?Part[\s]?)(?:\d+)*)*"
     ]
     found = False
     for p in patterns:
-        print (f"Checking pattern {p}")
+        if myx_args.params.verbose:
+            print (f"Checking {id3Title} for pattern {p}")
         p = re.compile(p, re.IGNORECASE)
         m = p.search(id3Title)
         if m is not None:
-            #if myx_args.params.verbose:
             gd = m.groupdict()
-            print (gd)
+            if myx_args.params.verbose:
+                print (f"Fixing id3: {gd}")
             
             if ("title" in gd) and m.group("title") is not None:
                 book.title = str(m.group("title")).strip()

@@ -218,10 +218,6 @@ class BookFile:
                 book.narrators.append(Contributor(narrator))
         #duration in minutes
         book.duration = duration
-
-        #if bad metatag or if the title follows a specific pattern, derive from the book name/filename
-        if myx_args.params.fixid3:
-            self.__getBookFromTag__(parent, book)
         
         #return a book object created from  ffprobe
         self.ffprobeBook=book
@@ -392,8 +388,7 @@ class BookFile:
  
     def hardlinkFile(self, source, target):
         #add target to base Media folder
-        destination = os.path.join("/data/media/audiobooks/mam", target)
-        #print ("Destination {}-{}".format(destination, os.path.join("/data/media/audiobooks/test", target)))
+        destination = os.path.join(myx_args.params.media_path, target)
         #check if the target path exists
         if (not os.path.exists(destination)):
             #make dir path

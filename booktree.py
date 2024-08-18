@@ -193,31 +193,31 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             book[hashKey].files.append(bf)
 
     #we don't know this is multi-book, make this determination (will be slow)
-    if (not myx_args.params.multibook):
-        for b in book.keys():
-            #if this is a multifile book
-            if len(book[b].files) > 1:
-                #For performance purposes, assume that all multifile books are multi-book
-                book[b].isMultiBookCollection=True
-                multiBookCollections.append(book[b])
-                if myx_args.params.verbose:
-                    print (f"{book[b].name} could be a multi-BOOK collection: {len(book[b].files)}")
+    # if (not myx_args.params.multibook):
+    #     for b in book.keys():
+    #         #if this is a multifile book
+    #         if len(book[b].files) > 1:
+    #             #For performance purposes, assume that all multifile books are multi-book
+    #             book[b].isMultiBookCollection=True
+    #             multiBookCollections.append(book[b])
+    #             if myx_args.params.verbose:
+    #                 print (f"{book[b].name} could be a multi-BOOK collection: {len(book[b].files)}")
 
-                # newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
-                # if (isMultiBookCollection):
-                #     book[b].isMultiBookCollection=True
-                #     multiBookCollections.append(book[b])
-                #     if myx_args.params.verbose:
-                #         print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
-                # else:
-                #     book[b].isMultiFileBook=True
-                #     multiFileCollections.append(book[b])
-                #     if myx_args.params.verbose:
-                #         print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
-            else:
-                #single file books
-                if myx_args.params.verbose:
-                    print (f"{book[b].name} is a single file book")
+    #             # newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
+    #             # if (isMultiBookCollection):
+    #             #     book[b].isMultiBookCollection=True
+    #             #     multiBookCollections.append(book[b])
+    #             #     if myx_args.params.verbose:
+    #             #         print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
+    #             # else:
+    #             #     book[b].isMultiFileBook=True
+    #             #     multiFileCollections.append(book[b])
+    #             #     if myx_args.params.verbose:
+    #             #         print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
+    #         else:
+    #             #single file books
+    #             if myx_args.params.verbose:
+    #                 print (f"{book[b].name} is a single file book")
 
         #add books from multi-book collections
         for mbc in multiBookCollections:
@@ -259,6 +259,10 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             normalBooks.append(book[b])            
             #Process these books the same way, essentially based on the first book in the file list
             bf = book[b].files[0]
+
+            #if bad metatag or if the title follows a specific pattern, derive from the book name/filename
+            if myx_args.params.fixid3:
+                bf.__getBookFromTag__(book[b].name, bf.ffprobeBook)
 
             #search MAM record
             if (myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible"):
