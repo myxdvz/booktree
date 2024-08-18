@@ -220,7 +220,8 @@ class BookFile:
         book.duration = duration
 
         #if bad metatag or if the title follows a specific pattern, derive from the book name/filename
-        self.__getBookFromTag__(parent, book)
+        if myx_args.params.fixid3:
+            self.__getBookFromTag__(parent, book)
         
         #return a book object created from  ffprobe
         self.ffprobeBook=book

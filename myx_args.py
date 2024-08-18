@@ -16,18 +16,18 @@ def importArgs():
     parser.add_argument("--media_path", help="Where your organized files will be, i.e. your Audiobookshelf library", required=True)
     #path to log files, e.g. /data/media/abs
     parser.add_argument("--log_path", default="", help="Where your log files will be")
-    #dry-run
-    parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
-    #medata source (audible|mam|id3|log)
+    #medata source (audible|mam|mam-audible|id3|log)
     parser.add_argument("metadata", choices=["audible","mam","mam-audible","log"], default="mam-audible", help="Source of the metada: (audible, mam, mam-audible)")
     parser.add_argument("--session", default="", help="Your session cookie")
     parser.add_argument("--matchrate", default=60, help="minimum acceptable fuzzy match rate")
-    #verbose
+    #debug flags
+    parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
     parser.add_argument("--verbose", default=False, action="store_true", help="Level of prints on the screen")
-    #OPf file?
+    #Advanced flags
     parser.add_argument("--no-opf", default=False, action="store_true", help="If provided, skips OPF file")
     parser.add_argument("--no-cache", default=False, action="store_true", help="If provided, skips caching")
     parser.add_argument("--multibook", default=False, action="store_true", help="If provided, assume this is a multibook collection, bypass the check")
+    parser.add_argument("--fixid3", default=False, action="store_true", help="If provided, will attempt to fix id3 metadata")
 
     #get all arguments
     args = parser.parse_args()
