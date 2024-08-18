@@ -176,6 +176,10 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
         #read metadata
         bf.ffprobe(key)
 
+        #if bad ffprobe data or fixid3
+        if (len(bf.ffprobeBook.title) == 0) or (myx_args.params.fixid3):
+            bf.ffprobeBook.title = myx_utilities.getAltTitle (key, bf.ffprobeBook)        
+
         #at this point, the books is either at the root, or under a book folder
         if myx_args.params.verbose:
             print ("Adding {}\nParent:{}".format(bf.fullPath,bf.getParentFolder()))
@@ -261,8 +265,8 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             bf = book[b].files[0]
 
             #if bad metatag or if the title follows a specific pattern, derive from the book name/filename
-            if myx_args.params.fixid3:
-                bf.__getBookFromTag__(book[b].name, bf.ffprobeBook)
+            # if myx_args.params.fixid3:
+            #     bf.__getBookFromTag__(book[b].name, bf.ffprobeBook)
 
             #search MAM record
             if (myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible"):

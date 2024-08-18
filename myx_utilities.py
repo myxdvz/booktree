@@ -431,10 +431,13 @@ def getBookFromTag (id3Title, book):
     # Belgarath the Sorcerer, Part 1
     # The Seeress of Kell (Malloreon 5), Part 2
     # Robert Ludlum - 2005 The Ambler Warning 004-End
+    # John Sandford - (Davenport_Prey 01) Rules of Prey (1989) [M4B]
     #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
     patterns = [
         #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
         "(?P<author>[a-zA-Z0-9'_\.\s]+)(?:-)?(?P<series>[a-zA-Z'_\.\s\']+)(?P<part>\d*[.]?\d*)?(?P<title>[a-zA-Z'_\.\s]+)*(?:\d{4})+(?:\s)*(?:\d{3})(?:[a-zA-Z0-9'_\-\.]+)*",
+        #(Author) (-) ((Series) (Part)) (Title) (Year) (Extra)
+        "(?P<author>[a-zA-Z0-9'_\.\s]+)(?:-)?(?:\s)?(?:\()?(?P<series>^([a-zA-Z'_\.\s\']+)(?:\))?(?P<part>\d*[.]?\d*)?)+(?P<title>[a-zA-Z'_\.\s]+)*(?P<year>\d{4})(?:\s)?(\[M4B\])?",
         #(Title) (Series), (Extra)
         "(?P<title>[a-zA-Z0-9'_\.\s]+)((?:\()(?P<series>[a-zA-Z'_\.\s]+)(?P<part>\d*[.]?\d*)?(?:\)))?(?:,)+(?:\s)+(?:Part[\s]?)(?:\d+)*",
         #(Series) - (Title) - (Extra)
@@ -464,3 +467,60 @@ def getBookFromTag (id3Title, book):
             break               
 
     return book
+
+def getAltTitle(parent, book):
+    #start with title
+    altTitle = cleanseTitle(book.title).lower()
+    stop = False
+    words = []
+    
+    while True:
+        #print (f"Getting alternate title for {altTitle}")
+
+        #remove extra characters (there really should'nt be : here) 
+        for c in ["-", ".", "part", "track", "of", "(", ")", "_", "[", "]", "m4b"]:
+            altTitle = altTitle.replace (c, " ")
+
+        for c in ["'"]:
+            altTitle = altTitle.replace (c, "")
+        #print (f"remove symbols >> {altTitle}")
+
+        #remove authors name in title
+        for a in book.authors:
+            altTitle = re.sub(f"{a.name}", " ", altTitle, flags=re.IGNORECASE)
+
+        #print (f"remove {book.authors} >> {altTitle}")
+
+        #remove series name in title
+        for s in book.series:
+            altTitle = re.sub(f"{s.name}", " ", altTitle, flags=re.IGNORECASE)
+
+        #print (f"remove {book.series} >> {altTitle}")
+
+        #split in spaces, remove the numbers
+        altTitle = re.sub(r"\b\d*\b", "", altTitle, flags=re.IGNORECASE)
+        #print (f"remove digits >> {altTitle}")
+
+        for w in altTitle.split():
+            if w not in words:
+                words.append(w)
+
+        #print (f"remove spaces >> {' '.join(words)}")
+
+        if (len(words)) or (stop):
+            altTitle = ' '.join(words)
+            print (f"Found alternative title {altTitle}")
+            book.title = altTitle
+            break
+        else:
+            altTitle = cleanseTitle(parent).lower()
+            stop = True
+
+    #join the title back
+    if len (words):
+        return book.title
+    else:
+        return ""
+
+
+    

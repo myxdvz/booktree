@@ -547,8 +547,6 @@ class MAMBook:
         else:
             book = self.ffprobeBook     
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
-            if (len(title) == 0):
-                title = myx_utilities.cleanseSeries(book.getSeries(" "))
 
         #pprint(book)
         
