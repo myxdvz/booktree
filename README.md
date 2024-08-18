@@ -122,6 +122,16 @@ python booktree.py audible --source_path /downloads --media_path /data/media/abs
   **Q:  What if the mam or audible search returns multiple matches?**
   <p>A: Fuzzymatch is used to get the best match</p>
 
+  **Q:  My metadata is not producing any match, what can I do?**
+  <p>A: Add --fixid3 parameter.</p>
+  
+        This flag supports parsing some known/common id3 patterns:
+        
+        * (Author) (-) (Series) (Title) (Year) (Extra/Chapters) 
+        * (Title) (Series), (Part/Extra)
+        * (Series) - (Title) - (Part/Extra)
+
+
 ## Dependencies
 * Python >= 3.10
 * ffmpeg
