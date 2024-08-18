@@ -102,12 +102,15 @@ def optimizeKeys(keywords, delim=" "):
             for j in i.split():
                 #print(j)
                 #if it's numeric like 02, make it an actual digit
-                if (not j.isdigit()):
-                    #remove any articles like a, i, the
-                    if ((len(j) > 1) and (j.lower() not in ["the","and","m4b","series","audiobook","audiobooks", "book", "part", "track"])):
-                        #print(f"Adding {j.lower()}")
+                if (not j.isdigit()) and (len(j) > 1):
+                    lcj = j.lower()
+                    #if not an article, or a word in the ignore list
+                    if lcj not in ["the","and","m4b","mp3","series","audiobook","audiobooks", "book", "part", "track", "novel"]:
+                        #if not CD or DISC XX"
                         if not (re.search ("cd\s?\d+", j, re.IGNORECASE) or  re.search ("disc\s?\d+", j, re.IGNORECASE)):
-                            kw.append(j.lower())
+                            #if it's not already in the list
+                            if lcj not in kw:
+                                kw.append(j.lower())
 
     #now return comma delimited string
     return delim.join(kw)
@@ -358,7 +361,6 @@ def isCached(key, category):
         #Check if this book's hashkey exists in the cache, if so - it's been processed
         bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
         found = os.path.exists(bookFile)  
-        #print(f"Checking if {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}\n\tCached: {found}")
         return found      
     
 def cacheMe(key, category, content):
@@ -369,22 +371,20 @@ def cacheMe(key, category, content):
         bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
         with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
             file.write(json.dumps(content))
-            #pprint(content, file)
     
-        #print(f"Caching {self.name} with hashKey {self.getHashKey()}\n\tFile: {bookFile}")
+        if myx_args.params.verbose:
+            print(f"Caching {key} in File: {bookFile}")
         return os.path.exists(bookFile)        
 
 def loadFromCache(key, category):
     if (myx_args.params.no_cache):
         return None
     else:    
-        #print (f"Loading {key} from {category} cache...")
         #return the content from the cache file
         bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
         with open(bookFile, mode='r', encoding='utf-8') as file:
             f = file.read()
         
-        #print(f"Retrieving {self.name} with hashKey {self.getHashKey()} from cache\n\tFile: {bookFile}")
         return json.loads(f)
     
 def isMultiCD(parent):
@@ -403,9 +403,16 @@ def isThisMyAuthorsBook (authors, book):
 def isThisMyBookTitle (title, book, matchrate=0):
     mytitle = cleanseTitle(title)
     thisTitle = cleanseTitle(book.title)
+    if len(book.series):
+        thisSeries = cleanseSeries(book.series[0].name)
+    else:
+        thisSeries = ""
+    thisSeriesTitle = " - ".join([thisSeries, thisTitle])
     
-    match = fuzzymatch(mytitle, thisTitle)
+    matchname = fuzzymatch(mytitle, thisTitle)
+    matchseriesname = fuzzymatch(mytitle, thisSeriesTitle)
     if myx_args.params.verbose:
-        print (f"Checking if {book.title} matches my book {title}: {match}")
-    return  match >= matchrate
+        print (f"Checking if {thisTitle} or {thisSeriesTitle} matches my book {title}: {matchname} or {matchseriesname}")
+
+    return  (matchname >= matchrate) or (matchseriesname >= matchrate)
     

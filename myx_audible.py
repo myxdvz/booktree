@@ -7,8 +7,7 @@ import myx_classes
 import myx_args
 
 def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords=""):
-    if myx_args.params.verbose:
-        print (f"getAudibleBook\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
+    print (f"Searching Audible for\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
 
     enBooks=[]
     cacheKey = myx_utilities.getHash(f"{asin}{title}{authors}{narrators}{keywords}")
@@ -46,9 +45,6 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
 
             #cache this results
             myx_utilities.cacheMe(cacheKey, "audible", books)
-
-            if myx_args.params.verbose:
-                pprint(books)
 
         except Exception as e:
                 print(f"Error searching audible: {e}")
@@ -132,9 +128,6 @@ def product2Book(product):
                 #if this relationship is a series
                 if (str(relationship["relationship_type"]) == "series"):
                     book.series.append(myx_classes.Series(str(relationship["title"]), str(relationship["sequence"])))
-        
-        if myx_args.params.verbose:
-            pprint (book)
             
         return book
     else:

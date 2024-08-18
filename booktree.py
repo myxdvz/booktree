@@ -75,9 +75,6 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
             except csv.Error as e:
                 print(f"file {inputFile}: {e}") 
 
-        if myx_args.params.verbose:
-            pprint (book)
-
         #login to Audible
         #auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
 
@@ -115,9 +112,6 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                         
                     else:
                         unmatchedFiles.append(book[b])
-
-                    if myx_args.params.verbose:
-                        pprint(book[b])
             
         #disconnect
         #myx_audible.audibleDisconnect(auth)
@@ -167,14 +161,10 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     for f in allFiles:
         #for each book file
         print(f"Categorizing: {f}\r", end="\r")
+
         #create a bookFile
         fullpath=os.path.join(myx_args.params.source_path, f)
         bf=myx_classes.BookFile(f, fullpath, myx_args.params.source_path)
-        bf.ffprobe()
-
-        #at this point, the books is either at the root, or under a book folder
-        if myx_args.params.verbose:
-            print ("Adding {}\nParent:{}".format(bf.fullPath,bf.getParentFolder()))
 
         #create dictionary using book (assumed to be the the parent Folder) as the key
         #if there's no parent folder or if multibook is on, then the filename is the key
@@ -182,6 +172,13 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             key=bf.getFileName()
         else:
             key=bf.getParentFolder()
+
+        #read metadata
+        bf.ffprobe(key)
+
+        #at this point, the books is either at the root, or under a book folder
+        if myx_args.params.verbose:
+            print ("Adding {}\nParent:{}".format(bf.fullPath,bf.getParentFolder()))
 
         #if the book exists, this must be multi-file book, append the files
         hashKey=myx_utilities.getHash(str(key))
@@ -288,9 +285,6 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             else:
                 unmatchedFiles.append(book[b])
 
-            if myx_args.params.verbose:
-                pprint(book[b])
-
         else:
             print(f"Skipping: {book[b].name}...")
         
@@ -350,6 +344,11 @@ if __name__ == "__main__":
 
         #start the program
         main()
+
+
+
+
+
         
         
 

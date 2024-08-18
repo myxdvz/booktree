@@ -173,19 +173,39 @@ class BookFile:
     def getFileName(self):
         return os.path.basename(self.file)
         
-    def __probe_file(self):
+    def __probe_file__ (self):
         #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
         cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags:format=duration', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', self.fullPath]
         p = subprocess.Popen(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err =  p.communicate()
         #pprint(json.loads(out))
         return json.loads(out)
+
+    def __getBookFromTag__ (self, id3Title, book):
+        #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
+        #reTitle = "([a-zA-Z0-9_\.\s]+)(-)([a-zA-Z0-9_\.\s]+)(\d+)(\s?)([a-zA-Z0-9_\.\-\s]+)(\d{1-4})([a-zA-Z0-9_\.\s]*)"
+        reTitle = "(?P<author>[a-zA-Z0-9_\.\s]+)(?:-)?(?P<series>[a-zA-Z_\.\s]+)(?P<part>\d+)*(?P<title>[a-zA-Z_\.\s]+)*(?:\d{4})+(?:\s)*(?:\d{3})(?:[a-zA-Z0-9_\-\.]+)*"
+        p = re.compile(reTitle, re.IGNORECASE)
+        m = p.search(id3Title)
+        if m is not None:
+            if myx_args.params.verbose:
+                print (m.groupdict())
+            
+            book.title = str(m.group("title")).strip()
+            book.setAuthors(str(m.group("author")).strip())
+            book.series.append(Series(str(m.group("series")).strip(), str(m.group("part")).strip()))
+            #pprint (book)                  
+
+        else:
+            print (f"Pattern not found: {book.title}")    
+
+        return book
     
-    def ffprobe(self):
+    def ffprobe(self, parent):
         #ffprobe the file
         duration=0
         try:
-            r = self.__probe_file()
+            r = self.__probe_file__()
             duration = float(r["format"]["duration"])
             metadata= r["format"]["tags"]
         except Exception as e:
@@ -215,6 +235,9 @@ class BookFile:
                 book.narrators.append(Contributor(narrator))
         #duration in minutes
         book.duration = duration
+
+        #if bad metatag or if the title follows a specific pattern, derive from the book name/filename
+        self.__getBookFromTag__(parent, book)
         
         #return a book object created from  ffprobe
         self.ffprobeBook=book
@@ -555,7 +578,7 @@ class MAMBook:
                                             myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True),
                                             myx_utilities.cleanseTitle(title, stripUnabridged=True), 
                                             myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" "))])
-        print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
+        #print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
         
         #generate author, narrator combo
         author_narrator=[]
@@ -588,12 +611,16 @@ class MAMBook:
 
         self.audibleMatches=books
         # Because the Audible search is sorted by relevance, we assume that the top search is the best match  
-        mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
+        if myx_args.params.multibook:
+            mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
+        else:
+            mamBook = '|'.join([book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
+
 
         #process search results
         if (self.audibleMatches is not None):
             if (myx_args.params.verbose):
-                    print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
+                print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
 
             #if (len(self.audibleMatches) > 1):
                 #find the best match
@@ -616,16 +643,19 @@ class MAMBook:
                             
             bestMatchRate=0
             #find the best match
+            print(f"Finding the best match out of {len(books)} results")
             for product in books:
                 abook=myx_audible.product2Book(product)
-                if myx_utilities.isThisMyAuthorsBook(book.authors, abook) and myx_utilities.isThisMyBookTitle(book.title, abook, myx_args.params.matchrate):
+                if myx_utilities.isThisMyAuthorsBook(book.authors, abook) and myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate):
                     #include this book in the comparison
-                    audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
+                    if myx_args.params.multibook:
+                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
+                    else:
+                        audibleBook = '|'.join([abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
                     matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
                     abook.matchRate=matchRate
 
-                    if myx_args.params.verbose:
-                        print(f"Match Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}")
+                    print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}")
                     
                     if (matchRate > bestMatchRate):
                         bestMatchRate=matchRate
