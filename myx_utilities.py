@@ -24,11 +24,14 @@ def probe_file(filename):
 def getList(items, delimiter=",", encloser="", stripaccents=True):
     enclosedItems=[]
     for item in items:
-        if strip_accents:
-            enclosedItems.append("{}{}{}".format(encloser, strip_accents(item.name), encloser))
+        if type(item) == myx_classes.Contributor:
+            enclosedItems.append(f"{encloser}{cleanseAuthor(item.name)}{encloser}")
         else:
-            enclosedItems.append("{}{}{}".format(encloser, item.name, encloser))
-        
+            if type(item) == myx_classes.Series:
+                enclosedItems.append(f"{encloser}{cleanseSeries(item.name)}{encloser}")
+            else:
+                enclosedItems.append(f"{encloser}{item.name}{encloser}")
+
     return delimiter.join(enclosedItems)
 
 def cleanseAuthor(author):
@@ -36,7 +39,7 @@ def cleanseAuthor(author):
     stdAuthor=strip_accents(author)
 
     #remove some characters we don't want on the author name
-    for c in ["- editor", " - ", "'"]:
+    for c in ["- editor", "- contributor", " - ", "'"]:
         stdAuthor=stdAuthor.replace(c,"")
 
     #replace . with space, and then make sure that there's only single space between words)
@@ -81,7 +84,9 @@ def fuzzymatch(x:str, y:str):
         newY = newY.replace (c, "")
 
     if (len(newX) and len(newY)):
-        newZ=fuzz.token_sort_ratio(newX, newY)
+        newZ=fuzz.partial_ratio(newX, newY)
+        # newZ=fuzz.token_sort_ratio(newX, newY)
+        # newZ=fuzz._ratio(newX, newY)
         #print ("{} Fuzzy Match {}={}".format(newZ, newX, newY))
         return newZ
     else:
