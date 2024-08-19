@@ -50,11 +50,14 @@ def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     #remove (Unabridged) and strip accents
     stdTitle=title
 
-    for w in [" (Unabridged)", "m4b", "mp3"]:
-        stdTitle=stdTitle.replace(w,"")
+    for w in [" (Unabridged)", "m4b", "mp3", ","]:
+        stdTitle=stdTitle.replace(w," ")
     
     if stripaccents:
         stdTitle = strip_accents(stdTitle)
+
+    #remove Book X
+    stdTitle = re.sub (r"\bBook(\s)?(\d)+\b", "", stdTitle, flags=re.IGNORECASE)
 
     # remove any subtitle that goes after a :
     
@@ -85,8 +88,8 @@ def fuzzymatch(x:str, y:str):
 
     if (len(newX) and len(newY)):
         # newZ=fuzz.partial_ratio(newX, newY)
-        # newZ=fuzz.token_sort_ratio(newX, newY)
-        newZ=fuzz._ratio(newX, newY)
+        newZ=fuzz.token_sort_ratio(newX, newY)
+        #newZ=fuzz._ratio(newX, newY)
         return newZ
     else:
         return 0
@@ -477,7 +480,7 @@ def getAltTitle(parent, book):
         #print (f"Getting alternate title for {altTitle}")
 
         #remove extra characters (there really should'nt be : here) 
-        for c in ["-", ".", "part", "track", "of", "(", ")", "_", "[", "]", "m4b"]:
+        for c in ["-", ".", "part", "track", "of", "(", ")", "_", "[", "]", "m4b", "book", ","]:
             altTitle = altTitle.replace (c, " ")
 
         for c in ["'"]:
