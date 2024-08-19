@@ -52,7 +52,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                             #print (f"{str(row["book"])} exists, just adding the file {bf.file}")
                             book[hashKey].files.append(bf)
                         else:
-                            print (f"{str(row['book'])} is new, adding the book")
+                            #print (f"{str(row['book'])} is new, adding the book")
                             book[hashKey]= myx_classes.MAMBook(str(row["book"]))
                             book[hashKey].metadata = (row["metadatasource"])
                             book[hashKey].files.append(bf)
@@ -64,57 +64,54 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                             # else:
                             book[hashKey].bestMAMMatch = None
                             book[hashKey].bestAudibleMatch = None
-                            allFiles.append(book[hashKey])
-
-                            #if metadata == as is, use the id3 tag as is
-                            if (book[hashKey].metadata == "as-is"):
-                                matchedFiles.append(book[hashKey])
-
 
                     i += 1
             except csv.Error as e:
                 print(f"file {inputFile}: {e}") 
 
-        #login to Audible
-        #auth, client = myx_audible.audibleConnect(myx_args.params.auth, audibleAuthFile)
-
         #Process the books, for the most part this is run, because id3 info is bad/empty
         for b in book.keys():
             #try and match again, the assumption, is that the log has the right information
             #TODO: Check if the file has been processed before, if so skip
-            if (book[b].metadata != "as-is"): # and (not book[b].isCached("book")):
-                print(f"Processing: {book[b].name}...")
-                #if it's not Matched, match it
-                if ((book[b].bestMAMMatch is None) and (book[b].bestAudibleMatch is None)):
-                    #Search MAM record
-                    bf = book[b].files[0]
-                    
-                    #log mode bypasses MAM because the user is already fixing the id3 directly
-                    #book[b].getMAMBooks(myx_args.params.session, bf)
-
-                    #Search Audible using the provided id3 metadata in the input file
-                    book[b].getAudibleBooks(httpx)
-
-                    print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
-                    myx_utilities.printDivider()
-
-                    #set the best metadata source: Audible > MAM > ID3
-                    if (book[b].bestAudibleMatch is not None):
-                        book[b].metadata = "audible"
-                    elif (book[b].bestMAMMatch is not None):
-                        book[b].metadata = "mam"
-                    else:
-                        book[b].metadata = "id3"
-                    
-                    #if matched, add to matchedFiles
-                    if book[b].isMatched():
-                        matchedFiles.append(book[b])
+            if (book[b].isCached("book")):
+                #Skipping
+                print (f"Skipping {book[b].name}, already processed...")
+            else:
+                #file hasn't been processed, but do we need to do a metadata lookup?
+                allFiles.append(book[hashKey])
+                if (book[b].metadata != "as-is"):
+                    print(f"Processing: {book[b].name}... {book[b].metadata}")
+                    #if it's not Matched, match it
+                    if ((book[b].bestMAMMatch is None) and (book[b].bestAudibleMatch is None)):
+                        #Search MAM record
+                        bf = book[b].files[0]
                         
-                    else:
-                        unmatchedFiles.append(book[b])
-            
-        #disconnect
-        #myx_audible.audibleDisconnect(auth)
+                        #log mode bypasses MAM because the user is already fixing the id3 directly
+                        #book[b].getMAMBooks(myx_args.params.session, bf)
+
+                        #Search Audible using the provided id3 metadata in the input file
+                        book[b].getAudibleBooks(httpx)
+
+                        print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
+                        myx_utilities.printDivider()
+
+                        #set the best metadata source: Audible > MAM > ID3
+                        if (book[b].bestAudibleMatch is not None):
+                            book[b].metadata = "audible"
+                        elif (book[b].bestMAMMatch is not None):
+                            book[b].metadata = "mam"
+                        else:
+                            book[b].metadata = "id3"
+                        
+                        #if matched, add to matchedFiles
+                        if book[b].isMatched():
+                            matchedFiles.append(book[b])
+                            
+                        else:
+                            unmatchedFiles.append(book[b])
+                else:
+                    #if metadata == as is, use the id3 tag as is
+                    matchedFiles.append(book[b])
 
         # #Create Hardlinks
         print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
