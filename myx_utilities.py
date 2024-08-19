@@ -68,12 +68,12 @@ def standardizeAuthors(mediaPath, dryRun=False):
             oldAuthor=os.path.basename(f)
             newAuthor=cleanseAuthor(oldAuthor)
             if (oldAuthor != newAuthor):
-                print("Renaming: {} >> {}".format(f, os.path.join(os.path.dirname(f), newAuthor)))
+                print(f"Renaming: {f} >> {os.path.join(os.path.dirname(f), newAuthor)}")
                 if (not dryRun):
                     try:
                         os.path(f).rename(os.path.join(os.path.dirname(f), newAuthor))
                     except Exception as e:
-                        print ("Can't rename {}: {}".format(f, e))
+                        print (f"Can't rename {f}: {e}")
 
 def fuzzymatch(x:str, y:str):
     newX = x
@@ -84,10 +84,9 @@ def fuzzymatch(x:str, y:str):
         newY = newY.replace (c, "")
 
     if (len(newX) and len(newY)):
-        newZ=fuzz.partial_ratio(newX, newY)
+        # newZ=fuzz.partial_ratio(newX, newY)
         # newZ=fuzz.token_sort_ratio(newX, newY)
-        # newZ=fuzz._ratio(newX, newY)
-        #print ("{} Fuzzy Match {}={}".format(newZ, newX, newY))
+        newZ=fuzz._ratio(newX, newY)
         return newZ
     else:
         return 0
@@ -150,7 +149,7 @@ def createHardLinks(bookFiles, targetFolder="", dryRun=False):
             for p in f.getTargetPaths(book):
                 if (not dryRun):
                     f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
-                #print ("Hardlinking {} to {}".format(f.sourcePath, os.path.join(targetFolder,p)))
+                print (f"Hardlinking {f.sourcePath} to {os.path.join(targetFolder,p)}")
             print("\n", 40 * "-", "\n")
 
 def logBookRecords(logFilePath, bookFiles):
@@ -176,7 +175,7 @@ def logBookRecords(logFilePath, bookFiles):
                 writer.writerow(row)
 
         except csv.Error as e:
-            print("file {}: {}".format(logFilePath, e))
+            print(f"file {logFilePath}: {e}")
 
 def logBooks(logFilePath, books):
     if len(books):
@@ -196,7 +195,7 @@ def logBooks(logFilePath, books):
                         writer.writerow(row)
 
             except csv.Error as e:
-                print("file {}: {}".format(logFilePath, e))    
+                print(f"file {logFilePath}: {e}")
 
 def findBookFiles (baseFileList, filegrouping):
     
@@ -301,7 +300,7 @@ def readLog(logFilePath, books):
                     print(reader.fieldnames)
 
             except csv.Error as e:
-                print("file {}: {}".format(logFilePath, e))    
+                print(f"file {logFilePath}: {e}")
 
 
 def getLogHeaders():

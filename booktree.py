@@ -179,7 +179,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
         #at this point, the books is either at the root, or under a book folder
         if myx_args.params.verbose:
-            print ("Adding {}\nParent:{}".format(bf.fullPath,bf.getParentFolder()))
+            print (f"Adding {bf.fullPath}\nParent:{bf.getParentFolder()}")
 
         #if the book exists, this must be multi-file book, append the files
         hashKey=myx_utilities.getHash(str(key))
@@ -314,7 +314,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
 def main():
     #create the logfile
-    logfile=os.path.join(os.path.abspath(myx_args.params.log_path),"booktree_log_{}.csv".format(datetime.now().strftime("%Y%m%d%H%M%S")))
+    logfile=os.path.join(os.path.abspath(myx_args.params.log_path),f"booktree_log_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv")
 
     #validate that source_path and media_path exists
     path=myx_args.params.source_path

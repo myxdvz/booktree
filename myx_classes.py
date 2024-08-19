@@ -32,7 +32,7 @@ class Series:
     
     def getSeriesPart(self):
         if (len(self.part.strip()) > 0):
-            return "{} #{}".format(self.name, str(self.part))
+            return f"{self.name} #{str(self.part)}"
         else:
             return self.name
 
@@ -250,142 +250,6 @@ class BookFile:
         else:
             return None
     
-    def matchBook(self, client, matchRate=75):
-        #given book file, ffprobe and audiblematches, return the best match
-        parent = myx_utilities.getParentFolder(self.fullPath,self.sourcePath).replace(" (Unabridged)", "")
-
-        #first, read the ID tags
-        ffprobeBook=self.ffprobe()
-        asin=ffprobeBook.asin
-        keywords=myx_utilities.optimizeKeys([parent])
-
-        #catalog/products asin, author, title, keywords
-        # books=getAudibleBook(client, asin, ffprobeBook.getAuthors(), parent, keywords)
-        # if books is not None:
-        #     print ("Found {} books".format(len(books)))
-        #     for book in books:
-        #         self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-
-        # Strategy#1:  If an ASIN was in the ID Tag, search by ASIN
-        if len(ffprobeBook.asin) > 0:
-            print ("Getting Book by ASIN ", ffprobeBook.asin)
-            book=self.__getAudibleBook(myx_audible.getBookByAsin(client, ffprobeBook.asin))
-            if ((book is not None) and (myx_utilities.fuzzymatch(ffprobeBook.title, book.title) > matchRate)):
-                self.audibleMatch=book
-                self.isMatched=True
-
-        # Strategy #2:  ASIN search was a bust, try a wider search (Author, Title, Keywords)
-        #asin might be available but a match wasn't found, try Author/Title Search        
-        if (not self.isMatched):
-            fBook=""
-
-            #check if an author was found
-            if (len(ffprobeBook.authors) == 0):
-                author=""
-            else:
-                author=ffprobeBook.authors[0].name
-
-            #Use Case:  If title or author are missing, perform a keyword search with whatever is available with the ID3 tags
-            if ((len(author)==0) and len(ffprobeBook.title) ==0):
-                keywords=myx_utilities.optimizeKeys([parent],",")
-                # Option #1: find book by artist or title (using parent folder)
-                print ("No ID3 tags Getting Book by Parent Folder: {}".format(keywords))
-                books=myx_audible.getAudibleBook(client, keywords=keywords)
-                if books is not None:
-                    print ("Found {} books".format(len(books)))
-                    for book in books:
-                        self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                        #self.audibleMatches.append(self.__getAudibleBook(book))
-                # For Fuzzy Match, just use Keywords
-                fBook=keywords
-            else:
-                #there's at least some metadata available
-                #fBook="{},{},{},{},{}".format(ffprobeBook.title,ffprobeBook.subtitle, ffprobeBook.getAuthors("|"), ffprobeBook.getNarrators("|"),ffprobeBook.getSeriesParts())
-
-                #Use Case : Clean ID3, there's an author, a title, a narrator
-                if (len(ffprobeBook.title)):
-                    keywords=myx_utilities.optimizeKeys([ffprobeBook.getAuthors(),ffprobeBook.getNarrators()])
-                    print ("Getting Book by Title:{} & Keywords:'{}'".format(ffprobeBook.title, keywords))
-                    books=myx_audible.getAudibleBook(client, title=ffprobeBook.title, keywords=keywords)
-                    if books is not None:
-                        print ("Found {} books".format(len(books)))
-                        fBook="{},{}".format(ffprobeBook.title, keywords)
-                        for book in books:
-                            #self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                            self.audibleMatches.append(self.__getAudibleBook(book))             
-
-                if (len(self.audibleMatches) == 0):
-                    #Use Case: Author, Title, Narrator is too narrow - we're putting these values as keywords with the folder name
-                    if (len(ffprobeBook.title)):
-                        keywords=myx_utilities.optimizeKeys([parent,ffprobeBook.getAuthors()])
-                        print ("Getting Book by Keyword using Parent Folder/Author/Title as keywords {}".format(keywords))
-                        books=myx_audible.getAudibleBook(client, title=ffprobeBook.title, keywords=keywords)
-                        if books is not None:
-                            print ("Found {} books".format(len(books)))
-                            fBook="{},{},{}".format(parent,ffprobeBook.title,ffprobeBook.getAuthors())
-                            for book in books:
-                                #self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                                self.audibleMatches.append(self.__getAudibleBook(book))             
-
-                    #Use Case: Clean ID3, but didn't find a match, try a wider search - normally because it's a multi-file book and the parent folder is the title
-                    if (len(self.audibleMatches) == 0):
-                        print ("Performing wider search...")
-
-                        # Use Case: ID3 has the author, the parent folder is ONLY the title
-                        print ("Getting Book by Parent Folder Title: {}".format(parent))
-                        #books=getBookByAuthorTitle(client, author, parent)
-                        keywords=myx_utilities.optimizeKeys([parent])
-                        books=myx_audible.getAudibleBook(client, keywords=keywords)                        
-                        if books is not None:
-                            print ("Found {} books".format(len(books)))
-                            fBook=parent
-                            for book in books:
-                                #self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                                self.audibleMatches.append(self.__getAudibleBook(book))
-                        
-                        # Use Case:  ID3 has the author, and the album is the title
-                        if (len(ffprobeBook.series) > 0):
-                            print ("Getting Book by Album Title: {}, {}".format(author, ffprobeBook.series[0].name))
-                            if (len(ffprobeBook.series) > 0):
-                                books=myx_audible.getBookByAuthorTitle(client, author, ffprobeBook.series[0].name)
-                                if books is not None:
-                                    print ("Found {} books".format(len(books)))
-                                    fBook+=",{},{}".format(author, ffprobeBook.series[0].name)
-                                    for book in books:
-                                        #self.audibleMatches[book["asin"]]=self.__getAudibleBook(book)
-                                        self.audibleMatches.append(self.__getAudibleBook(book)) 
-
-            # check if there's an actual Match from Audible
-            # if there's exactly 1 match, assume it's good
-            if (len(self.audibleMatches) == 1):
-                for i in self.audibleMatches:
-                    self.audibleMatch=i
-                    self.isMatched=True
-            else:
-                print ("Finding the best match out of {}".format(len(self.audibleMatches)))
-                if (len(self.audibleMatches) > 1):
-                    #find the highest match, start with 0
-                    bestMatchRatio=0
-                    bestMatchedBook=None
-                    for book in self.audibleMatches:
-                        #do fuzzymatch with all these combos, get the highest value
-                        aBook="{},{},{}".format(book.title,book.getAuthors("|"),book.getSeriesParts("|"))
-                        matchRatio=myx_utilities.fuzzymatch(fBook,aBook)
-
-                        #set this books matchRatio
-                        book.matchRate=matchRatio
-                        
-                        if (matchRatio > bestMatchRatio):
-                            print("Found a better match!{} > {}", matchRatio, bestMatchRatio)
-                            #this is the new best
-                            bestMatchRatio = matchRatio
-                            bestMatchedBook = book
-
-                    if (bestMatchRatio > matchRate):
-                        self.isMatched=True
-                        self.audibleMatch=bestMatchedBook
-                        print ("{} Match found: {}".format(bestMatchRatio, bestMatchedBook.title))
- 
     def hardlinkFile(self, source, target):
         #add target to base Media folder
         destination = os.path.join(myx_args.params.media_path, target)
@@ -398,13 +262,13 @@ class BookFile:
         #check if the file already exists in the target directory
         filename=os.path.join(destination, os.path.basename(source).split('/')[-1])
         if (not os.path.exists(filename)):
-            print ("Hardlinking {} to {}".format(source, filename))
+            print (f"Hardlinking {source} to {filename}")
             try:
                 os.link(source, filename)
                 self.isHardlinked=True
             except Exception as e:
-                print ("Failed to hardlink {} to {} due to:".format(source, filename, e))
-
+                print (f"Failed to hardlink {source} to {filename} due to {e}")
+                
         return self.isHardlinked
     
     def getTargetPaths(self, book):
