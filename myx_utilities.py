@@ -346,6 +346,10 @@ def createOPF(book, path):
         series += f"\t<ns0:meta name='calibre:series' content='{s.name}' />\n"
         series += f"\t<ns0:meta name='calibre:series_index' content='{s.part}' />\n"
     template = re.sub(r"__SERIES__", series, template)
+
+    # - Language -
+    template = re.sub(r"__LANGUAGE__", book.language, template)
+
     
     # if len(book.series) and len(book.series[0].name):
     #     template = re.sub(r"__SERIES__", book.series[0].name, template)
