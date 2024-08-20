@@ -9,6 +9,7 @@ import math
 import httpx
 import itertools
 from itertools import permutations 
+from pathvalidate import sanitize_filename
 import myx_utilities
 import myx_audible
 import myx_args
@@ -46,6 +47,7 @@ class Book:
     length:int=0
     duration:float=0
     matchRate=0
+    language="english"
     series:list[Series]= field(default_factory=list)
     authors:list[Contributor]= field(default_factory=list)
     narrators:list[Contributor]= field(default_factory=list)
@@ -281,7 +283,7 @@ class BookFile:
                 author=book.authors[0].name  
 
             #standardize author name (replace . with space, and then make sure that there's only single space)
-            stdAuthor=myx_utilities.cleanseAuthor(author)
+            stdAuthor=sanitize_filename(myx_utilities.cleanseAuthor(author))
 
             #is this a MultiCd file?
             disc = self.getParentFolder()
@@ -293,11 +295,11 @@ class BookFile:
             #Does this book belong in a series - only take the first series?
             sPath=""
             if (len(book.series) > 0):
-                sPath=os.path.join(stdAuthor, myx_utilities.cleanseSeries(book.series[0].name), 
-                                        f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}",
-                                        disc)
+                sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseSeries(book.series[0].name)), 
+                                        sanitize_filename(f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}"),
+                                        sanitize_filename(disc))
             else:
-                sPath=os.path.join(stdAuthor, myx_utilities.cleanseTitle(book.title), disc)
+                sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseTitle(book.title), disc))
 
             paths.append(sPath)
 
@@ -387,16 +389,16 @@ class MAMBook:
             author=authors[0].name  
 
         #standardize author name (replace . with space, and then make sure that there's only single space)
-        stdAuthor=myx_utilities.cleanseAuthor(author)
+        stdAuthor=sanitize_filename(myx_utilities.cleanseAuthor(author))
 
         #Does this book belong in a series - only take the first series?
         sPath=""
         if (len(series) > 0):
-            sPath=os.path.join(stdAuthor, myx_utilities.cleanseSeries(series[0].name), 
-                                      f"{myx_utilities.cleanseSeries(series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(title)}",
-                                      disc)
+            sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseSeries(series[0].name)), 
+                                      sanitize_filename(f"{myx_utilities.cleanseSeries(series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(title)}"),
+                                      sanitize_filename(disc))
         else:
-            sPath=os.path.join(stdAuthor, myx_utilities.cleanseTitle(title), disc)
+            sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseTitle(title)), sanitize_filename(disc))
 
         paths.append(sPath)
         return paths  
@@ -408,6 +410,7 @@ class MAMBook:
         if (not myx_args.params.multibook) and (self.bestMAMMatch is not None):
             book = self.bestMAMMatch
             title = book.getCleanTitle()
+            language = book.language
         else:
             book = self.ffprobeBook     
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
@@ -435,7 +438,7 @@ class MAMBook:
             #print (f"Author: {an[0]}\tNarrator: {an[1]}")
             sAuthor=myx_utilities.cleanseAuthor(an[0])
             sNarrator=myx_utilities.cleanseAuthor(an[1])
-            books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords)
+            books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords, language=language)
 
             #book found, exit for loop
             if ((books is not None) and len(books)):
@@ -443,7 +446,7 @@ class MAMBook:
             
             #print (f"Nothing was found so just doing a keyword search {keywords}")
             # too constraining?  try just a keywords search with all information
-            books=myx_audible.getAudibleBook (client, keywords=keywords)
+            books=myx_audible.getAudibleBook (client, keywords=keywords, language=language)
 
             #book found, exit for loop
             if ((books is not None) and len(books)):

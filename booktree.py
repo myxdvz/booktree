@@ -192,6 +192,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             book[hashKey].ffprobeBook=bf.ffprobeBook
             book[hashKey].isSingleFile=(myx_args.params.multibook) or (bf.hasNoParentFolder())
             book[hashKey].files.append(bf)
+            book[hashKey].metadata = "id3"
 
     #we don't know this is multi-book, make this determination (will be slow)
     # if (not myx_args.params.multibook):
@@ -268,21 +269,17 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             #search MAM record
             if (myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible"):
                 book[b].getMAMBooks(myx_args.params.session, bf)
+                if (book[b].bestMAMMatch is not None):
+                    book[b].metadata = "mam"
                 
             #now, Search Audible using either MAM (better) or ffprobe metadata
             if (myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible"):
                 book[b].getAudibleBooks(httpx)
+                if (book[b].bestAudibleMatch is not None):
+                    book[b].metadata = "audible"
                 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()
-
-            #set the best metadata source: Audible > MAM > ID3
-            if (book[b].bestAudibleMatch is not None):
-                book[b].metadata = "audible"
-            elif (book[b].bestMAMMatch is not None):
-                book[b].metadata = "mam"
-            else:
-                book[b].metadata = "id3"
                 
             #if matched, add to matchedFiles
             if book[b].isMatched():
@@ -360,7 +357,6 @@ if __name__ == "__main__":
 
         #start the program
         main()
-
 
 
         

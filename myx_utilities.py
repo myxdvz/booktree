@@ -8,6 +8,7 @@ import mimetypes
 import csv
 import json
 import hashlib
+from langcodes import *
 import myx_classes
 import myx_args
 
@@ -60,8 +61,9 @@ def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     stdTitle = re.sub (r"\bBook(\s)?(\d)+\b", "", stdTitle, flags=re.IGNORECASE)
 
     # remove any subtitle that goes after a :
-    
-    return stdTitle.split(":")[0]
+    # stdTitle.split(":")[0]
+
+    return stdTitle
 
 def standardizeAuthors(mediaPath, dryRun=False):
     #get all authors from the source path
@@ -109,7 +111,7 @@ def optimizeKeys(keywords, delim=" "):
             for j in i.split():
                 #print(j)
                 #if it's numeric like 02, make it an actual digit
-                if (not j.isdigit()) and (len(j) > 1):
+                if (len(j) > 1):
                     lcj = j.lower()
                     #if not an article, or a word in the ignore list
                     if lcj not in ["the","and","m4b","mp3","series","audiobook","audiobooks", "book", "part", "track", "novel"]:
@@ -151,7 +153,7 @@ def createHardLinks(bookFiles, targetFolder="", dryRun=False):
             #if a book belongs to multiple series, hardlink them to tall series
             for p in f.getTargetPaths(book):
                 if (not dryRun):
-                    f.hardlinkFile(f.sourcePath, os.path.join(targetFolder,p))
+                    f.hardlinkFile(f.sourcePath, os.path.join(targetFolder, p))
                 print (f"Hardlinking {f.sourcePath} to {os.path.join(targetFolder,p)}")
             print("\n", 40 * "-", "\n")
 
@@ -524,5 +526,13 @@ def getAltTitle(parent, book):
     else:
         return ""
 
+def getLanguage(code):
+    lang = "english"
+    try: 
+        lang = Language.get(code).display_name()
 
+    except:
+        print ("Unable to get display name for Language: {code}, defaulting to English")
     
+    return lang.lower()
+

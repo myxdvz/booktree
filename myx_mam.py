@@ -62,8 +62,7 @@ def searchMAM(session, titleFilename, authors, extension, lang_code=None, audiob
                         "fileTypes": "true",
                         "filenames": "true"
                     },
-                    "main_cat": mam_categories,
-                    "browse_lang": [lang_code] if lang_code else []
+                    "main_cat": mam_categories
                 },
             }
 
@@ -118,9 +117,12 @@ def getMAMBook(session, titleFilename="", authors="", extension=""):
                     for series in series_info.values():
                         s=list(series)
                         book.series.append(myx_classes.Series(str(s[0]), s[1]))    
+            if 'lang_code' in b: 
+                book.language=myx_utilities.getLanguage((b["lang_code"]))
 
             if myx_args.params.verbose:
                 pprint(b)   
+            
             books.append(book)
 
     return books

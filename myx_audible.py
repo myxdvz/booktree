@@ -6,7 +6,7 @@ import myx_utilities
 import myx_classes
 import myx_args
 
-def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords=""):
+def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords="", language="english"):
     print (f"Searching Audible for\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
 
     enBooks=[]
@@ -56,7 +56,7 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
     elif "products" in books.keys():
         for book in books["products"]:
             #ignore non-english books
-            if ("language" in book) and (book["language"] == "english"):
+            if ("language" in book) and (book["language"] == language):
                 enBooks.append(book)
 
     return enBooks
@@ -79,7 +79,7 @@ def getBookByAsin(client, asin):
     except Exception as e:
         print(e)
 
-def getBookByAuthorTitle(client, author, title):
+def getBookByAuthorTitle(client, author, title, language="english"):
     print ("getBookByAuthorTitle: ", author, ", ", title)
     enBooks=[]
     try:
@@ -100,7 +100,7 @@ def getBookByAuthorTitle(client, author, title):
 
         for book in books["products"]:
             #ignore non-english books
-            if (book["language"] == "english"):
+            if (book["language"] == language):
                 enBooks.append(book)
 
         print("Found ", len(enBooks), " books")
