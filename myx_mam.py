@@ -64,6 +64,7 @@ def searchMAM(session, titleFilename, authors, extension, lang_code=None, audiob
                     },
                     "main_cat": mam_categories
                 },
+                "perpage":10
             }
 
             try:
@@ -92,9 +93,9 @@ def searchMAM(session, titleFilename, authors, extension, lang_code=None, audiob
 
     return None
 
-def getMAMBook(session, titleFilename="", authors="", extension=""):
+def getMAMBook(session, titleFilename="", authors="", extension="", ebooks=False):
     books=[]
-    mamBook=searchMAM(session, titleFilename, authors, extension, 1, True, False)
+    mamBook=searchMAM(session, titleFilename, authors, extension, 1, (not ebooks), ebooks)
     if (mamBook is not None):
         for b in mamBook:
             #pprint(b)

@@ -152,9 +152,12 @@ def createHardLinks(bookFiles, targetFolder="", dryRun=False):
         if (book is not None):
             #if a book belongs to multiple series, hardlink them to tall series
             for p in f.getTargetPaths(book):
+                prefix=""
                 if (not dryRun):
                     f.hardlinkFile(f.sourcePath, os.path.join(targetFolder, p))
-                print (f"Hardlinking {f.sourcePath} to {os.path.join(targetFolder,p)}")
+                else:
+                    prefix = "[Dry Run] : "
+                print (f"{prefix}Hardlinking {f.sourcePath} to {os.path.join(targetFolder,p)}")
             print("\n", 40 * "-", "\n")
 
 def logBookRecords(logFilePath, bookFiles):
@@ -258,17 +261,19 @@ def isMultiBookCollection (mamBook):
     return filegrouping, len(filegrouping) > 1
 
 def findBestMatch(targetBook, books):
-    
     #set the baseline book
     targetString = '|'.join([targetBook.title, targetBook.getAuthors(), targetBook.getSeriesParts()])
     bestMatchRate=0
     bestMatchedBook=None
     #for each matched book, calculate the fuzzymatch rate
+    print(f"Finding the best MAM match out of {len(books)} results")
     for book in books:
         #create the same string
         bookString = '|'.join([book.title, book.getAuthors(), book.getSeriesParts()])
         matchRate=fuzzymatch(targetString, bookString)
         book.matchRate=matchRate
+
+        print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
 
         #is this better?
         if (matchRate > bestMatchRate):
@@ -517,8 +522,11 @@ def getAltTitle(parent, book):
 
         if (len(words)) or (stop):
             altTitle = ' '.join(words)
-            print (f"Found alternative title {altTitle}")
             book.title = altTitle
+
+            if myx_args.params.verbose:
+                print (f"Found alternative title {altTitle}")
+
             break
         else:
             altTitle = cleanseTitle(parent).lower()

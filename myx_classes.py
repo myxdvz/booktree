@@ -258,18 +258,20 @@ class BookFile:
         #check if the target path exists
         if (not os.path.exists(destination)):
             #make dir path
-            print ("Creating target directory ", destination)
+            print (f"Creating target directory: {destination} ")
             os.makedirs(destination, exist_ok=True)
         
         #check if the file already exists in the target directory
         filename=os.path.join(destination, os.path.basename(source).split('/')[-1])
         if (not os.path.exists(filename)):
-            print (f"Hardlinking {source} to {filename}")
             try:
+                print (f"Hardlinking {source} to {filename}")
                 os.link(source, filename)
                 self.isHardlinked=True
             except Exception as e:
                 print (f"Failed to hardlink {source} to {filename} due to {e}")
+        else:
+            print (f"Skipped Hardlinking {source} to {filename} : exists")
                 
         return self.isHardlinked
     
@@ -403,7 +405,7 @@ class MAMBook:
         paths.append(sPath)
         return paths  
 
-    def getAudibleBooks(self, client):
+    def getAudibleBooks(self, client, fixid3=False):
 
         books=[]
         #Search Audible using either MAM (better) or ffprobe metadata
@@ -412,7 +414,13 @@ class MAMBook:
             title = book.getCleanTitle()
             language = book.language
         else:
-            book = self.ffprobeBook     
+            # source is ID3 data
+            book = self.ffprobeBook
+
+            # if bad ffprobe data or fixid3, make it better?
+            if (len(book.title) == 0) or (fixid3):
+                book.title = myx_utilities.getAltTitle (self.name, book) 
+
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
         #pprint(book)
@@ -486,7 +494,7 @@ class MAMBook:
                             
             bestMatchRate=0
             #find the best match
-            print(f"Finding the best match out of {len(books)} results")
+            print(f"Finding the best Audible match out of {len(books)} results")
             for product in books:
                 abook=myx_audible.product2Book(product)
                 if myx_utilities.isThisMyAuthorsBook(book.authors, abook) and myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate):
@@ -498,7 +506,7 @@ class MAMBook:
                     matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
                     abook.matchRate=matchRate
 
-                    print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}")
+                    print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}\n")
                     
                     if (matchRate > bestMatchRate):
                         bestMatchRate=matchRate
@@ -551,7 +559,12 @@ class MAMBook:
         if (self.metadataBook is not None):
             if myx_args.params.verbose:
                 print (f"Hardlinking files for {self.metadataBook.title}")
-            
+
+            if (dryRun):
+                prefix = "[Dry Run] : "    
+            else:
+                prefix = ""    
+
             #for each file for this book                
             for f in self.files:
                 #if a book belongs to multiple series, only use the first one                
@@ -559,15 +572,12 @@ class MAMBook:
                     if (not dryRun):
                         #hardlink the file
                         p = os.path.join(targetFolder, p)
-                        if myx_args.params.verbose:
-                            print (f"Hardlinking {f.fullPath} to {p}")
-
                         f.hardlinkFile(f.fullPath, p)                   
-                        f.isHardLinked=True
 
-                        #generate the OPF file
-                        if myx_args.params.verbose:
-                            print (f"Generating OPF file ...")
+                    print (f"{prefix}Hardlinking {f.fullPath} to {p}")
+
+                    #generate the OPF file
+                    print (f"{prefix}Generating OPF file ...")
 
                     if ((not dryRun) and (not myx_args.params.no_opf)):
                         self.metadataBook.createOPF(p)
@@ -605,7 +615,7 @@ class MAMBook:
 
         return book    
 
-    def getMAMBooks(self, session, bookFile:BookFile):
+    def getMAMBooks(self, session, bookFile:BookFile, ebooks=False, fixid3=False):
         #search MAM record for this book
         # title=" | ".join([f'"{myx_utilities.cleanseTitle(self.name, stripaccents=False, stripUnabridged=False)}"', 
         #                 f'"{myx_utilities.cleanseTitle(bookFile.ffprobeBook.title, stripaccents=False, stripUnabridged=False)}"',
@@ -634,14 +644,14 @@ class MAMBook:
     
         # Search using book key and authors (using or search in case the metadata is bad)
         print(f"Searching MAM for\n\tTitleFilename: {title}\n\tauthors:{authors}")
-        self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension)
+        self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension, ebooks=ebooks)
 
         # was the author inaccurate? (Maybe it was LastName, FirstName or accented)
         # print (f"Trying again because Filename, Author = {len(self.mamMatches)}")
         if len(self.mamMatches) == 0:
             #try again, without author this time
             print(f"Widening MAM search using just\n\tTitleFilename: {title}")
-            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, extension=extension)
+            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, extension=extension, ebooks=ebooks)
 
         # # print (f"Trying again because Filename = {len(self.mamMatches)}")
         # if len(self.mamMatches) == 0:
@@ -652,9 +662,12 @@ class MAMBook:
 
         if myx_args.params.verbose:
             print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
-        
+    
         #find the best match
         if (len(self.mamMatches) > 1):
+            if (len(self.ffprobeBook.title) == 0) or (fixid3):
+                self.ffprobeBook.title = myx_utilities.getAltTitle(self.name, self.ffprobeBook)
+
             self.bestMAMMatch=myx_utilities.findBestMatch(self.ffprobeBook, self.mamMatches)
         else:
             if (len(self.mamMatches)):

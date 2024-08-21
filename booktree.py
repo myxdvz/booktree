@@ -90,7 +90,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                         #book[b].getMAMBooks(myx_args.params.session, bf)
 
                         #Search Audible using the provided id3 metadata in the input file
-                        book[b].getAudibleBooks(httpx)
+                        book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
 
                         print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
                         myx_utilities.printDivider()
@@ -116,7 +116,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
         # #Create Hardlinks
         print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
         for mb in matchedFiles:
-            mb.createHardLinks(mediaPath,dryRun)       
+            mb.createHardLinks(mediaPath, dryRun)       
 
             #cache this book - unless it's a dry run
             if (not dryRun):
@@ -137,7 +137,11 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     #grab all files and put it in allFiles
     #if there were no patters provided, grab ALL known audiobooks, currently these are M4B and MP3 files
     if (len(myx_args.params.file)==0):
-        for f in ("**/*.m4b","**/*.mp3"):
+        if myx_args.params.ebooks:
+            format = ["**/*.epub","**/*.pdf"]
+        else:
+            format = ["**/*.m4b","**/*.mp3"]
+        for f in format:
             print (f"Looking for {f} from {path}")
             allFiles.extend(iglob(f, root_dir=myx_args.params.source_path, recursive=True))
     else:
@@ -172,10 +176,6 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
         #read metadata
         bf.ffprobe(key)
-
-        #if bad ffprobe data or fixid3
-        if (len(bf.ffprobeBook.title) == 0) or (myx_args.params.fixid3):
-            bf.ffprobeBook.title = myx_utilities.getAltTitle (key, bf.ffprobeBook)        
 
         #at this point, the books is either at the root, or under a book folder
         if myx_args.params.verbose:
@@ -268,13 +268,13 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
             #search MAM record
             if (myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible"):
-                book[b].getMAMBooks(myx_args.params.session, bf)
+                book[b].getMAMBooks(myx_args.params.session, bf, myx_args.params.ebooks, myx_args.params.fixid3)
                 if (book[b].bestMAMMatch is not None):
                     book[b].metadata = "mam"
                 
             #now, Search Audible using either MAM (better) or ffprobe metadata
-            if (myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible"):
-                book[b].getAudibleBooks(httpx)
+            if (not myx_args.params.ebooks) and ((myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible")):
+                book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
                 if (book[b].bestAudibleMatch is not None):
                     book[b].metadata = "audible"
                 

@@ -28,6 +28,7 @@ def importArgs():
     parser.add_argument("--no-cache", default=False, action="store_true", help="If provided, skips caching")
     parser.add_argument("--multibook", default=False, action="store_true", help="If provided, will process books at file level")
     parser.add_argument("--fixid3", default=False, action="store_true", help="If provided, will attempt to fix id3 metadata")
+    parser.add_argument("--ebooks", default=False, action="store_true", help="If provided, will look for ebooks and skip audible")
 
     #get all arguments
     args = parser.parse_args()
