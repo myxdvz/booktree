@@ -61,7 +61,7 @@ def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     stdTitle = re.sub (r"\bBook(\s)?(\d)+\b", "", stdTitle, flags=re.IGNORECASE)
 
     # remove any subtitle that goes after a :
-    # stdTitle.split(":")[0]
+    stdTitle = re.sub (r"(:(\s)?([a-zA-Z0-9_'\.\s]{2,})*)", "", stdTitle, flags=re.IGNORECASE)
 
     return stdTitle
 
@@ -376,6 +376,9 @@ def isCached(key, category):
     if (myx_args.params.no_cache):
         return False
     else:
+        if myx_args.params.verbose:
+            print (f"Checking cache: {category}/{key}...")
+        
         #Check if this book's hashkey exists in the cache, if so - it's been processed
         bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
         found = os.path.exists(bookFile)  
@@ -425,16 +428,16 @@ def isThisMyAuthorsBook (authors, book):
 def isThisMyBookTitle (title, book, matchrate=0):
     mytitle = cleanseTitle(title)
     thisTitle = cleanseTitle(book.title)
+    thisSeriesTitle = thisTitle
+
     if len(book.series):
         thisSeries = cleanseSeries(book.series[0].name)
-    else:
-        thisSeries = ""
-    thisSeriesTitle = " - ".join([thisSeries, thisTitle])
+        thisSeriesTitle = " - ".join([thisSeries, thisTitle])
     
     matchname = fuzzymatch(mytitle, thisTitle)
     matchseriesname = fuzzymatch(mytitle, thisSeriesTitle)
     if myx_args.params.verbose:
-        print (f"Checking if {thisTitle} or {thisSeriesTitle} matches my book {title}: {matchname} or {matchseriesname}")
+        print (f"Checking if {thisTitle} or {thisSeriesTitle} matches my book {mytitle}: {matchname} or {matchseriesname}")
 
     return  (matchname >= matchrate) or (matchseriesname >= matchrate)
     

@@ -424,9 +424,15 @@ class MAMBook:
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
         #pprint(book)
+        #sometimes Audible returns nothing if there's too much info in the keywords
+        series=""
+        if (len(book.series)==1):
+            series = myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)
+        elif len(book.series):
+            series = myx_utilities.cleanseTitle(book.series[0].name, stripUnabridged=True)
         
         keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" ")),
-                                            myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True),
+                                            series,
                                             myx_utilities.cleanseTitle(title, stripUnabridged=True), 
                                             myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" "))])
         #print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
@@ -463,9 +469,9 @@ class MAMBook:
         self.audibleMatches=books
         # Because the Audible search is sorted by relevance, we assume that the top search is the best match  
         if not myx_args.params.multibook:
-            mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
+            mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), series])
         else:
-            mamBook = '|'.join([book.getAuthors(), book.getNarrators(), book.getCleanTitle(), book.getSeriesParts()])
+            mamBook = '|'.join([book.getAuthors(), book.getNarrators(), book.getCleanTitle(), series])
 
 
         #process search results
