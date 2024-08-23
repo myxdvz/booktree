@@ -409,6 +409,7 @@ class MAMBook:
     def getAudibleBooks(self, client, fixid3=False):
 
         books=[]
+        language="english"
         #Search Audible using either MAM (better) or ffprobe metadata
         if (not myx_args.params.multibook) and (self.bestMAMMatch is not None):
             book = self.bestMAMMatch
@@ -504,7 +505,7 @@ class MAMBook:
             print(f"Finding the best Audible match out of {len(books)} results")
             for product in books:
                 abook=myx_audible.product2Book(product)
-                if myx_utilities.isThisMyAuthorsBook(book.authors, abook) and myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate):
+                if myx_utilities.isThisMyAuthorsBook(book.authors, abook): #and myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate):
                     #include this book in the comparison
                     if not myx_args.params.multibook:
                         audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
