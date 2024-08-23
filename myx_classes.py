@@ -47,8 +47,9 @@ class Book:
     length:int=0
     duration:float=0
     matchRate=0
-    language="english"
-    snatched=False
+    language:str="english"
+    snatched:bool=False
+    description:str=""
     series:list[Series]= field(default_factory=list)
     authors:list[Contributor]= field(default_factory=list)
     narrators:list[Contributor]= field(default_factory=list)
@@ -160,7 +161,6 @@ class BookFile:
     isHardlinked:bool=False
     audibleMatch:Book=None
     ffprobeBook:Book=None
-    #audibleMatches:dict=field(default_factory=dict)
     audibleMatches:list[Book]= field(default_factory=list)
 
     def getExtension(self):
@@ -227,31 +227,6 @@ class BookFile:
         if verbose:
             pprint (book)
         return book
-    
-    def __getAudibleBook(self, product):
-        #product is an Audible product json
-        if product is not None:
-            book=Book()
-            if 'asin' in product: book.asin=product["asin"]
-            if 'title' in product: book.title=product["title"]
-            if 'subtitle' in product: book.subtitle=product["subtitle"]
-            if 'runtime_length_min' in product: book.length=product["runtime_length_min"]
-            if 'authors' in product: 
-                for author in product["authors"]:
-                    book.authors.append(Contributor(author["name"]))
-            if 'narrators' in product: 
-                for narrator in product["narrators"]:
-                    book.narrators.append(Contributor(narrator["name"]))
-            if 'publication_name' in product: book.publicationName=product["publication_name"]
-            if 'relationships' in product: 
-                for relationship in product["relationships"]:
-                    #if this relationship is a series
-                    if (relationship["relationship_type"] == "series"):
-                        book.series.append(Series(relationship["title"], relationship["sequence"]))
-            pprint (book)
-            return book
-        else:
-            return None
     
     def hardlinkFile(self, source, target):
         #add target to base Media folder
@@ -423,7 +398,7 @@ class MAMBook:
             if (len(book.title) == 0) or (fixid3):
                 book.title = myx_utilities.getAltTitle (self.name, book) 
 
-            title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
+                title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
         #pprint(book)
         #sometimes Audible returns nothing if there's too much info in the keywords
