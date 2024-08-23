@@ -268,17 +268,19 @@ def findBestMatch(targetBook, books):
     #for each matched book, calculate the fuzzymatch rate
     print(f"Finding the best MAM match out of {len(books)} results")
     for book in books:
-        #create the same string
-        bookString = '|'.join([book.title, book.getAuthors(), book.getSeriesParts()])
-        matchRate=fuzzymatch(targetString, bookString)
-        book.matchRate=matchRate
+        #if this book is in my Snatched, perform the fuzzy match
+        if (book.snatched):
+            #create the same string
+            bookString = '|'.join([book.title, book.getAuthors(), book.getSeriesParts()])
+            matchRate=fuzzymatch(targetString, bookString)
+            book.matchRate=matchRate
 
-        print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
+            print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
 
-        #is this better?
-        if (matchRate > bestMatchRate):
-            bestMatchRate=matchRate
-            bestMatchedBook=book   
+            #is this better?
+            if (matchRate > bestMatchRate):
+                bestMatchRate=matchRate
+                bestMatchedBook=book   
     
     return bestMatchedBook
 

@@ -48,6 +48,7 @@ class Book:
     duration:float=0
     matchRate=0
     language="english"
+    snatched=False
     series:list[Series]= field(default_factory=list)
     authors:list[Contributor]= field(default_factory=list)
     narrators:list[Contributor]= field(default_factory=list)

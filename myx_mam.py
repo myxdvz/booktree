@@ -120,11 +120,15 @@ def getMAMBook(session, titleFilename="", authors="", extension="", ebooks=False
                         book.series.append(myx_classes.Series(str(s[0]), s[1]))    
             if 'lang_code' in b: 
                 book.language=myx_utilities.getLanguage((b["lang_code"]))
+            if 'my_snatched' in b:
+                book.snatched=bool((b["my_snatched"]))
+
 
             if myx_args.params.verbose:
                 pprint(b)   
             
-            books.append(book)
+            if book.snatched:
+                books.append(book)
 
     return books
 
