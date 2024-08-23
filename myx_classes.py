@@ -632,13 +632,14 @@ class MAMBook:
         authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
         extension = f'"{bookFile.getExtension()}"'
 
-        #if there is no author, we can't just have the filename be the search
-        if (len(self.ffprobeBook.authors) == 0):
-            #use the series as part of the search as well
-            if (len(self.ffprobeBook.series)):
-                title = " ".join([title, self.ffprobeBook.getSeries()])
-            elif (len(self.ffprobeBook.title)):
-                title = " ".join([title, self.ffprobeBook.title])
+        # REMOVED 8/22 after search API supported my_snatched
+        # if there is no author, we can't just have the filename be the search
+        # if (len(self.ffprobeBook.authors) == 0):
+        #     #use the series as part of the search as well
+        #     if (len(self.ffprobeBook.series)):
+        #         title = " ".join([title, self.ffprobeBook.getSeries()])
+        #     elif (len(self.ffprobeBook.title)):
+        #         title = " ".join([title, self.ffprobeBook.title])
         
         #if this is a single or normal file, do a filename search
         # if (not self.isMultiBookCollection):

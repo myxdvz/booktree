@@ -78,9 +78,11 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                 print (f"Skipping {book[b].name}, already processed...")
             else:
                 #file hasn't been processed, but do we need to do a metadata lookup?
-                allFiles.append(book[hashKey])
+                allFiles.append(book[b])
                 if (book[b].metadata != "as-is"):
                     print(f"Processing: {book[b].name}... {book[b].metadata}")
+
+                    #search MAM record
                     #if it's not Matched, match it
                     if ((book[b].bestMAMMatch is None) and (book[b].bestAudibleMatch is None)):
                         #Search MAM record
@@ -88,21 +90,21 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                         
                         #log mode bypasses MAM because the user is already fixing the id3 directly
                         #book[b].getMAMBooks(myx_args.params.session, bf)
+                        book[b].getMAMBooks(myx_args.params.session, bf, myx_args.params.ebooks, myx_args.params.fixid3)
+                        if (book[b].bestMAMMatch is not None):
+                            book[b].metadata = "mam"
 
                         #Search Audible using the provided id3 metadata in the input file
-                        book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
+                        #book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
+                        #now, Search Audible using either MAM (better) or ffprobe metadata
+                        if (not myx_args.params.ebooks):
+                            book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
+                            if (book[b].bestAudibleMatch is not None):
+                                book[b].metadata = "audible"                    
 
                         print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
                         myx_utilities.printDivider()
 
-                        #set the best metadata source: Audible > MAM > ID3
-                        if (book[b].bestAudibleMatch is not None):
-                            book[b].metadata = "audible"
-                        elif (book[b].bestMAMMatch is not None):
-                            book[b].metadata = "mam"
-                        else:
-                            book[b].metadata = "id3"
-                        
                         #if matched, add to matchedFiles
                         if book[b].isMatched():
                             matchedFiles.append(book[b])
