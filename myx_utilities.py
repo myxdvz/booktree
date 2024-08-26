@@ -338,6 +338,9 @@ def createOPF(book, path):
     # - Subtitle -
     template = re.sub(r"__SUBTITLE__", book.subtitle, template)
 
+    # - Description -
+    template = re.sub(r"__DESCRIPTION__", book.description, template)
+
     # - Narrator -
     narrators=""
     for narrator in book.narrators:

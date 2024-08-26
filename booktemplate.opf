@@ -8,6 +8,8 @@
 
     <dc:title>__TITLE__</dc:title>
     <dc:subtitle>__SUBTITLE__</dc:subtitle>
+    <dc:description><![CDATA[ __DESCRIPTION__ ]]></dc:description>
+
 __AUTHORS__
 __NARRATORS__    
     <dc:language>__LANGUAGE__</dc:language>

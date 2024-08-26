@@ -89,7 +89,7 @@ def getBookByAuthorTitle(client, author, title, language="english"):
                 "author": myx_utilities.strip_accents(author),
                 "title": title,
                 "response_groups": (
-                    "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
+                    "series, product_attrs, contributors, product_desc, product_extended_attrs"
                 )
             },
         )
@@ -115,6 +115,7 @@ def product2Book(product):
         if 'asin' in product: book.asin=str(product["asin"])
         if 'title' in product: book.title=str(product["title"])
         if 'subtitle' in product: book.subtitle=str(product["subtitle"])
+        if 'publisher_summary' in product: book.description=str(product["publisher_summary"])
         if 'runtime_length_min' in product: book.length=product["runtime_length_min"]
         if 'authors' in product: 
             for author in product["authors"]:
@@ -123,11 +124,9 @@ def product2Book(product):
             for narrator in product["narrators"]:
                 book.narrators.append(myx_classes.Contributor(str(narrator["name"])))
         if 'publication_name' in product: book.publicationName=str(product["publication_name"])
-        if 'relationships' in product: 
-            for relationship in product["relationships"]:
-                #if this relationship is a series
-                if (str(relationship["relationship_type"]) == "series"):
-                    book.series.append(myx_classes.Series(str(relationship["title"]), str(relationship["sequence"])))
+        if 'series' in product: 
+            for s in product["series"]:
+                book.series.append(myx_classes.Series(str(s["title"]), str(s["sequence"])))
             
         return book
     else:
