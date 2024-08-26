@@ -385,20 +385,18 @@ class MAMBook:
 
         books=[]
         language="english"
+        book = self.ffprobeBook
+        title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
+
         #Search Audible using either MAM (better) or ffprobe metadata
         if (not myx_args.params.multibook) and (self.bestMAMMatch is not None):
             book = self.bestMAMMatch
             title = book.getCleanTitle()
             language = book.language
-        else:
-            # source is ID3 data
-            book = self.ffprobeBook
 
-            # if bad ffprobe data or fixid3, make it better?
-            if (len(book.title) == 0) or (fixid3):
-                book.title = myx_utilities.getAltTitle (self.name, book) 
-
-                title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
+        # if bad ffprobe data or fixid3, make it better?
+        if (len(book.title) == 0) or (fixid3):
+            book.title = myx_utilities.getAltTitle (self.name, book) 
 
         #pprint(book)
         #sometimes Audible returns nothing if there's too much info in the keywords
@@ -446,9 +444,9 @@ class MAMBook:
         self.audibleMatches=books
         # Because the Audible search is sorted by relevance, we assume that the top search is the best match  
         if not myx_args.params.multibook:
-            mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getNarrators(), book.getCleanTitle(), series])
+            mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getCleanTitle(), series, book.getNarrators()])
         else:
-            mamBook = '|'.join([book.getAuthors(), book.getNarrators(), book.getCleanTitle(), series])
+            mamBook = '|'.join([book.getAuthors(), book.getCleanTitle(), series, book.getNarrators()])
 
 
         #process search results
@@ -477,15 +475,16 @@ class MAMBook:
                             
             bestMatchRate=0
             #find the best match
+        
             print(f"Finding the best Audible match out of {len(books)} results")
             for product in books:
                 abook=myx_audible.product2Book(product)
                 if myx_utilities.isThisMyAuthorsBook(book.authors, abook): #and myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate):
                     #include this book in the comparison
                     if not myx_args.params.multibook:
-                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts(), abook.getNarrators()])
                     else:
-                        audibleBook = '|'.join([abook.getAuthors(), abook.getNarrators(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        audibleBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts(), abook.getNarrators()])
                     matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
                     abook.matchRate=matchRate
 

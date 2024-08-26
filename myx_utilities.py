@@ -89,8 +89,8 @@ def fuzzymatch(x:str, y:str):
         newY = newY.replace (c, "")
 
     if (len(newX) and len(newY)):
-        # newZ=fuzz.partial_ratio(newX, newY)
-        newZ=fuzz.token_sort_ratio(newX, newY)
+        newZ=fuzz.partial_ratio(newX, newY)
+        #newZ=fuzz.token_sort_ratio(newX, newY)
         #newZ=fuzz._ratio(newX, newY)
         return newZ
     else:
@@ -419,11 +419,12 @@ def isMultiCD(parent):
 def isThisMyAuthorsBook (authors, book):
     if myx_args.params.verbose:
         print (f"Checking if {book.title} is {authors}'s book: {book.authors}")
+    
     found=False
     for author in authors:
         for bauthor in book.authors:
             #print (f"Author: {author.name} = {bauthor.name}? {(author.name.replace(' ', '') == bauthor.name.replace(' ', ''))}")
-            if (author.name.replace(" ", "") == bauthor.name.replace(" ", "")):
+            if (cleanseAuthor(author.name).replace(" ", "") == cleanseAuthor(bauthor.name).replace(" ", "")):
                 #print ("found\n")
                 found=True
                 break
@@ -490,11 +491,18 @@ def getBookFromTag (id3Title, book):
     return book
 
 def getAltTitle(parent, book):
-    #start with title
-    altTitle = cleanseTitle(book.title).lower()
     stop = False
     words = []
-    
+    skipSeries = False
+
+    #start with title
+    altTitle = cleanseTitle(book.title).lower()
+
+    #if title is blank, use series?
+    if (len(altTitle) == 0) and (len(book.series)):
+        altTitle = cleanseTitle(book.series[0].name)
+        if len(altTitle) : skipSeries = True
+
     while True:
         #print (f"Getting alternate title for {altTitle}")
 
@@ -513,10 +521,11 @@ def getAltTitle(parent, book):
         #print (f"remove {book.authors} >> {altTitle}")
 
         #remove series name in title
-        for s in book.series:
-            altTitle = re.sub(f"{s.name}", " ", altTitle, flags=re.IGNORECASE)
+        if (not skipSeries):
+            for s in book.series:
+                altTitle = re.sub(f"{s.name}", " ", altTitle, flags=re.IGNORECASE)
 
-        #print (f"remove {book.series} >> {altTitle}")
+            #print (f"remove {book.series} >> {altTitle}")
 
         #split in spaces, remove the numbers
         altTitle = re.sub(r"\b\d*\b", "", altTitle, flags=re.IGNORECASE)
