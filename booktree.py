@@ -196,33 +196,6 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             book[hashKey].files.append(bf)
             book[hashKey].metadata = "id3"
 
-    #we don't know this is multi-book, make this determination (will be slow)
-    # if (not myx_args.params.multibook):
-    #     for b in book.keys():
-    #         #if this is a multifile book
-    #         if len(book[b].files) > 1:
-    #             #For performance purposes, assume that all multifile books are multi-book
-    #             book[b].isMultiBookCollection=True
-    #             multiBookCollections.append(book[b])
-    #             if myx_args.params.verbose:
-    #                 print (f"{book[b].name} could be a multi-BOOK collection: {len(book[b].files)}")
-
-    #             # newBooks, isMultiBookCollection = myx_utilities.isMultiBookCollection(book[b])
-    #             # if (isMultiBookCollection):
-    #             #     book[b].isMultiBookCollection=True
-    #             #     multiBookCollections.append(book[b])
-    #             #     if myx_args.params.verbose:
-    #             #         print (f"{book[b].name} is a multi-BOOK collection: {len(newBooks)}")
-    #             # else:
-    #             #     book[b].isMultiFileBook=True
-    #             #     multiFileCollections.append(book[b])
-    #             #     if myx_args.params.verbose:
-    #             #         print (f"{book[b].name} is a multi-FILE collection: {len(book[b].files)}")
-    #         else:
-    #             #single file books
-    #             if myx_args.params.verbose:
-    #                 print (f"{book[b].name} is a single file book")
-
         #add books from multi-book collections
         for mbc in multiBookCollections:
             print (f"NewBook: {mbc.name}  Files: {len(mbc.files)}")
@@ -257,7 +230,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     for b in book.keys():    
         #if this book has not been processed before AND it is not a multibook collection
         #print (f"Book: {b} isCached: {book[b].isCached('book')}")
-        if (not book[b].isCached("book")) and (not book[b].isMultiBookCollection):
+        if (not book[b].isCached("book")):
             #process the book
             print(f"Processing: {book[b].name}...")
             normalBooks.append(book[b])            
@@ -268,17 +241,32 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             # if myx_args.params.fixid3:
             #     bf.__getBookFromTag__(book[b].name, bf.ffprobeBook)
 
-            #search MAM record
-            if (myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible"):
-                book[b].getMAMBooks(myx_args.params.session, bf, myx_args.params.ebooks, myx_args.params.fixid3)
-                if (book[b].bestMAMMatch is not None):
-                    book[b].metadata = "mam"
-                
-            #now, Search Audible using either MAM (better) or ffprobe metadata
-            if (not myx_args.params.ebooks) and ((myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible")):
-                book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
-                if (book[b].bestAudibleMatch is not None):
-                    book[b].metadata = "audible"
+            #search Audible first record
+            checkMAM = False
+            while True:
+                #Match Audible first, using id3 data
+                if (not myx_args.params.ebooks) and ((myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible")):
+                    book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
+                    if (book[b].bestAudibleMatch is not None):
+                        book[b].metadata = "audible"
+                        #a match is found, go to the next book
+                        break
+                    else:
+                        #first iteration, if there are no audible matches, use MAMs metadata
+                        if checkMAM:
+                            #checkMAM was already true, exit out of the loop
+                            break
+                        else:
+                            #No Audible match found -- assume it's because of bad metadata, use MAM's metadata
+                            checkMAM = True
+
+                if ((myx_args.params.ebooks) or (checkMAM)) and ((myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible")):
+                    book[b].getMAMBooks(myx_args.params.session, bf, myx_args.params.ebooks, myx_args.params.fixid3)
+                    if (book[b].bestMAMMatch is not None):
+                        book[b].metadata = "mam"
+
+                if (myx_args.params.ebooks):
+                    break
                 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()
@@ -293,13 +281,14 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             print(f"Skipping: {book[b].name}...")
         
     #Create Hardlinks
-    print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
+    print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books\n")
     for mb in matchedFiles:
         mb.createHardLinks(mediaPath,dryRun)
-
         #cache this book - unless it's a dry run
         if (not dryRun):
             mb.cacheMe("book", str(book[b]))
+
+        myx_utilities.printDivider()
 
     #Logging processed files
     print (f"\nLogging {len(normalBooks)} processed books")

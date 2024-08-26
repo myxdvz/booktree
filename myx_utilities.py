@@ -83,18 +83,18 @@ def standardizeAuthors(mediaPath, dryRun=False):
 def fuzzymatch(x:str, y:str):
     newX = x
     newY = y
+    newZ = {"partial" : 0, "token_sort" : 0, "ratio" : 0}
     #remove .:_-, for fuzzymatch
     for c in [".", ":", "_", "-", "[", "]", "'"]:
         newX = newX.replace (c, "")
         newY = newY.replace (c, "")
 
     if (len(newX) and len(newY)):
-        #newZ=fuzz.partial_ratio(newX, newY)
-        #newZ=fuzz.token_sort_ratio(newX, newY)
-        newZ=fuzz._ratio(newX, newY)
-        return newZ
-    else:
-        return 0
+        newZ["partial"]=fuzz.partial_ratio(newX, newY)
+        newZ["token_sort"]=fuzz.token_sort_ratio(newX, newY)
+        newZ["ratio"]=fuzz._ratio(newX, newY)
+
+    return newZ
     
 def optimizeKeys(keywords, delim=" "):
     #keywords is a list of stuff, we want to convert it in a comma delimited string
@@ -205,60 +205,12 @@ def logBooks(logFilePath, books):
             except csv.Error as e:
                 print(f"file {logFilePath}: {e}")
 
-def findBookFiles (baseFileList, filegrouping):
-    
-    updatedFileList=[]
-    if (len(baseFileList)==0):
-        #All files have been matched to a book, nothing else to process
-        return filegrouping
-    else:
-        #find all books from the bookfile list that matches the base book
-        if myx_args.params.verbose:
-            print (f"Checking files that match - {baseFileList[0].file}")
-
-        #create a new MAM Book based on the base Book file
-        baseBook = baseFileList[0].ffprobe()
-        mamBook = myx_classes.MAMBook(baseBook.title)
-        mamBook.ffprobeBook = baseBook
-        filegrouping.append (mamBook)
-
-        for i in range(1,len(baseFileList)-1):
-            f = baseFileList[i]
-            #read the id3 tags 
-            if (f.ffprobeBook is not None):
-                f.ffprobe()
-    
-            #check if the hash matches the value of the baseBook file - if not, it's probably it's own book
-            match = fuzzymatch(str(baseBook.getAllButTitle()), str(f.ffprobeBook.getAllButTitle()))
-
-            if (match == 100):
-                #add this file under mamBooks files
-                mamBook.files.append(f)
-            else:
-                #this file needs to be reprocessed, and tested with the other books
-                updatedFileList.append(f)
-
-    return findBookFiles(updatedFileList, filegrouping)
-
 def isCollection (bookFile):
     #we assume that most books are formatted this way /Book/Files.m4b
     #we assume that this is a collection, if the file is 3 levels deep, /Book/Another Book or CD/Files.m4b
 
     relPath = os.path.relpath(bookFile, myx_args.params.source_path).split("/")
     return (len(relPath) > 2)
-
-def isMultiBookCollection (mamBook):
-    if myx_args.params.verbose:
-        print (f"Checking {mamBook.name} file {range(len(mamBook.files))} files")
-    
-    filegrouping=[]
-    if len(mamBook.files) > 1:
-        #for i in range(len(mamBook.files)-1):
-        filegrouping = findBookFiles(mamBook.files, filegrouping)
-
-    #pprint(filegrouping)
-
-    return filegrouping, len(filegrouping) > 1
 
 def findBestMatch(targetBook, books):
     #set the baseline book
@@ -278,7 +230,7 @@ def findBestMatch(targetBook, books):
             print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
 
             #is this better?
-            if (matchRate > bestMatchRate):
+            if (matchRate["partial"] > bestMatchRate["partial"]):
                 bestMatchRate=matchRate
                 bestMatchedBook=book   
     
@@ -416,18 +368,31 @@ def loadFromCache(key, category):
 def isMultiCD(parent):
     return re.search("disc\s?\d+", parent.lower()) or re.search("cd\s?\d+", parent.lower())
 
+def isGraphicAudio(author):
+    m = re.search("graphic[\s]?audio[\s]?(llc[.]?)*", author.lower())
+    #print (f"Is {author} = 'Graphic Audio LLC.'? {m}")
+    return (m is not None)
+
 def isThisMyAuthorsBook (authors, book):
-    if myx_args.params.verbose:
-        print (f"Checking if {book.title} is {authors}'s book: {book.authors}")
-    
     found=False
     for author in authors:
-        for bauthor in book.authors:
-            #print (f"Author: {author.name} = {bauthor.name}? {(author.name.replace(' ', '') == bauthor.name.replace(' ', ''))}")
-            if (cleanseAuthor(author.name).replace(" ", "") == cleanseAuthor(bauthor.name).replace(" ", "")):
-                #print ("found\n")
-                found=True
-                break
+        if isGraphicAudio(author.name): 
+            continue
+        else:
+            for bauthor in book.authors:
+                if isGraphicAudio(bauthor.name): 
+                    continue
+                else:
+                    if myx_args.params.verbose:
+                        print (f"Checking if {book.title} is {authors}'s book: {book.authors}")
+
+                    #print (f"Author: {author.name} = {bauthor.name}? {(author.name.replace(' ', '') == bauthor.name.replace(' ', ''))}")
+                    if (cleanseAuthor(author.name).replace(" ", "") == cleanseAuthor(bauthor.name).replace(" ", "")):
+                        #print ("found\n")
+                        found=True
+                        break
+        
+        if found: break
 
     return found
 
@@ -445,51 +410,8 @@ def isThisMyBookTitle (title, book, matchrate=0):
     if myx_args.params.verbose:
         print (f"Checking if {thisTitle} or {thisSeriesTitle} matches my book {mytitle}: {matchname} or {matchseriesname}")
 
-    return  (matchname >= matchrate) or (matchseriesname >= matchrate)
+    return  (matchname["partial"] >= matchrate) or (matchseriesname["partial"] >= matchrate)
     
-def getBookFromTag (id3Title, book):
-    #Examples:
-    # Dark-Hunter 23 - Styxx - Part 3		
-    # Belgarath the Sorcerer, Part 1
-    # The Seeress of Kell (Malloreon 5), Part 2
-    # Robert Ludlum - 2005 The Ambler Warning 004-End
-    # John Sandford - (Davenport_Prey 01) Rules of Prey (1989) [M4B]
-    #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
-    patterns = [
-        #(Author) (-) (Series) (Part) (Title) (Year) (Extra)
-        "(?P<author>[a-zA-Z0-9'_\.\s]+)(?:-)?(?P<series>[a-zA-Z'_\.\s\']+)(?P<part>\d*[.]?\d*)?(?P<title>[a-zA-Z'_\.\s]+)*(?:\d{4})+(?:\s)*(?:\d{3})(?:[a-zA-Z0-9'_\-\.]+)*",
-        #(Author) (-) ((Series) (Part)) (Title) (Year) (Extra)
-        "(?P<author>[a-zA-Z0-9'_\.\s]+)(?:-)?(?:\s)?(?:\()?(?P<series>^([a-zA-Z'_\.\s\']+)(?:\))?(?P<part>\d*[.]?\d*)?)+(?P<title>[a-zA-Z'_\.\s]+)*(?P<year>\d{4})(?:\s)?(\[M4B\])?",
-        #(Title) (Series), (Extra)
-        "(?P<title>[a-zA-Z0-9'_\.\s]+)((?:\()(?P<series>[a-zA-Z'_\.\s]+)(?P<part>\d*[.]?\d*)?(?:\)))?(?:,)+(?:\s)+(?:Part[\s]?)(?:\d+)*",
-        #(Series) - (Title) - (Extra)
-        "(?P<series>[a-zA-Z'_\.\-\s]+)*(?P<part>\d*[.]?\d*)?(\s)?(?:-)?(?P<title>[a-zA-Z'_\.\s]+)*((?:-)(?:[\s]?Part[\s]?)(?:\d+)*)*"
-    ]
-    found = False
-    for p in patterns:
-        if myx_args.params.verbose:
-            print (f"Checking {id3Title} for pattern {p}")
-        p = re.compile(p, re.IGNORECASE)
-        m = p.search(id3Title)
-        if m is not None:
-            gd = m.groupdict()
-            if myx_args.params.verbose:
-                print (f"Fixing id3: {gd}")
-            
-            if ("title" in gd) and m.group("title") is not None:
-                book.title = str(m.group("title")).strip()
-            if ("author" in gd) and m.group("author") is not None: 
-                book.setAuthors(str(m.group("author")).strip())
-            if ("series" in gd) and m.group("series") is not None:
-                book.series.append(myx_classes.Series(str(m.group("series")).strip(), str(m.group("part")).strip()))
-
-            found = True     
-
-        if found:
-            break               
-
-    return book
-
 def getAltTitle(parent, book):
     stop = False
     words = []

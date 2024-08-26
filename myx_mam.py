@@ -73,9 +73,6 @@ def searchMAM(session, titleFilename, authors, extension, lang_code=None, audiob
                 #print(r.text)
                 if r.text == '{"error":"Nothing returned, out of 0"}':
                     return None
-                
-                if myx_args.params.verbose:
-                    pprint (r.json())
 
                 results = r.json()
 
@@ -121,10 +118,7 @@ def getMAMBook(session, titleFilename="", authors="", extension="", ebooks=False
             if 'lang_code' in b: 
                 book.language=myx_utilities.getLanguage((b["lang_code"]))
             if 'my_snatched' in b:
-                book.snatched=bool((b["my_snatched"]))
-                                   
-            if myx_args.params.verbose:
-                pprint(b)   
+                book.snatched=bool((b["my_snatched"])) 
             
             if book.snatched:
                 books.append(book)
