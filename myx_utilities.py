@@ -49,7 +49,7 @@ def cleanseAuthor(author):
 
 def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     #remove (Unabridged) and strip accents
-    stdTitle=title
+    stdTitle=str(title)
 
     for w in [" (Unabridged)", "m4b", "mp3", ","]:
         stdTitle=stdTitle.replace(w," ")
@@ -89,9 +89,9 @@ def fuzzymatch(x:str, y:str):
         newY = newY.replace (c, "")
 
     if (len(newX) and len(newY)):
-        newZ=fuzz.partial_ratio(newX, newY)
+        #newZ=fuzz.partial_ratio(newX, newY)
         #newZ=fuzz.token_sort_ratio(newX, newY)
-        #newZ=fuzz._ratio(newX, newY)
+        newZ=fuzz._ratio(newX, newY)
         return newZ
     else:
         return 0
@@ -542,7 +542,7 @@ def getAltTitle(parent, book):
             book.title = altTitle
 
             if myx_args.params.verbose:
-                print (f"Found alternative title {altTitle}")
+                print (f"Found alternative title: {altTitle}")
 
             break
         else:
