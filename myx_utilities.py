@@ -51,7 +51,7 @@ def cleanseTitle(title="", stripaccents=True, stripUnabridged=False):
     #remove (Unabridged) and strip accents
     stdTitle=str(title)
 
-    for w in [" (Unabridged)", "m4b", "mp3", ","]:
+    for w in [" (Unabridged)", "m4b", "mp3", ",", "- "]:
         stdTitle=stdTitle.replace(w," ")
     
     if stripaccents:
@@ -117,9 +117,11 @@ def optimizeKeys(keywords, delim=" "):
                     if lcj not in ["the","and","m4b","mp3","series","audiobook","audiobooks", "book", "part", "track", "novel"]:
                         #if not CD or DISC XX"
                         if not (re.search ("cd\s?\d+", j, re.IGNORECASE) or  re.search ("disc\s?\d+", j, re.IGNORECASE)):
-                            #if it's not already in the list
-                            if lcj not in kw:
-                                kw.append(j.lower())
+                            #if not a number
+                            if not (re.search ("\d+", j, re.IGNORECASE)):
+                                #if it's not already in the list
+                                if lcj not in kw:
+                                    kw.append(j.lower())
 
     #now return comma delimited string
     return delim.join(kw)
@@ -133,7 +135,7 @@ def getParentFolder(file, source):
         #this file is bad and has no parent folder, use the filename as the parent folder
         return os.path.basename(file)
     else:
-        return (parent.split("/")[-1])
+        return (parent.split(os.sep)[-1])
 
 def strip_accents(s):
     return ''.join(c for c in unicodedata.normalize('NFD', s)
@@ -230,8 +232,8 @@ def findBestMatch(targetBook, books):
             print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
 
             #is this better?
-            if (matchRate["partial"] > bestMatchRate["partial"]):
-                bestMatchRate=matchRate
+            if (matchRate["token_sort"] > bestMatchRate):
+                bestMatchRate=matchRate["token_sort"]
                 bestMatchedBook=book   
     
     return bestMatchedBook
@@ -410,7 +412,7 @@ def isThisMyBookTitle (title, book, matchrate=0):
     if myx_args.params.verbose:
         print (f"Checking if {thisTitle} or {thisSeriesTitle} matches my book {mytitle}: {matchname} or {matchseriesname}")
 
-    return  (matchname["partial"] >= matchrate) or (matchseriesname["partial"] >= matchrate)
+    return  (matchname["token_sort"] >= matchrate) or (matchseriesname["token_sort"] >= matchrate)
     
 def getAltTitle(parent, book):
     stop = False
@@ -487,3 +489,13 @@ def getLanguage(code):
     
     return lang.lower()
 
+def isMultiBookCollection(filePath):
+    #Is this MAM result a collection
+    isMBC = False
+    #if the # of paths from source path is 3 or more
+    path, file = os.path.split(filePath)    
+    #how deep is it from the source?
+    filedepth = len(path.split(os.sep)) + 1
+    # if the filedepth from source is 3 levels down, assume it's a multibook collection
+    isMBC = (filedepth >= 3)
+    return isMBC

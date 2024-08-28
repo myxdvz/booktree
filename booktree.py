@@ -237,37 +237,44 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
             #Process these books the same way, essentially based on the first book in the file list
             bf = book[b].files[0]
 
-            #if bad metatag or if the title follows a specific pattern, derive from the book name/filename
-            # if myx_args.params.fixid3:
-            #     bf.__getBookFromTag__(book[b].name, bf.ffprobeBook)
-
-            #search Audible first record
-            checkMAM = False
-            while True:
-                #Match Audible first, using id3 data
-                if (not myx_args.params.ebooks) and ((myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible")):
-                    book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
+            #get MAM first, check if it's a foreign book
+            isForeignBook = False
+            if ((myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible")):
+                book[b].getMAMBooks(myx_args.params.session, bf, myx_args.params.ebooks, myx_args.params.fixid3)
+                if (book[b].bestMAMMatch is not None):
+                    book[b].metadata = "mam"
+                    isForeignBook = (book[b].bestMAMMatch.language.lower() !=  "english")
+            
+            #Audible search only if this is not ebooks and metadatasource includes audible, otherwise MAM search is enough
+            if (not myx_args.params.ebooks) and ((myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible")):
+                if isForeignBook:
+                    #if bestMAMMatch is a foreign book, getAudible using MAM Metadata
+                    book[b].getAudibleBooks(httpx, book[b].bestMAMMatch, myx_args.params.fixid3)
                     if (book[b].bestAudibleMatch is not None):
-                        book[b].metadata = "audible"
-                        #a match is found, go to the next book
-                        break
-                    else:
-                        #first iteration, if there are no audible matches, use MAMs metadata
-                        if checkMAM:
-                            #checkMAM was already true, exit out of the loop
-                            break
-                        else:
-                            #No Audible match found -- assume it's because of bad metadata, use MAM's metadata
-                            checkMAM = True
+                        book[b].metadata = "mam-audible"
+                else:
+                    #This is not a foreign book, do an Audible Search using id3 values first   
+                    id3BestMatch = book[b].getAudibleBooks(httpx, book[b].ffprobeBook, myx_args.params.fixid3)
+                    if (book[b].bestAudibleMatch is not None):
+                        book[b].metadata = "audible" 
 
-                if ((myx_args.params.ebooks) or (checkMAM)) and ((myx_args.params.metadata == "mam") or (myx_args.params.metadata == "mam-audible")):
-                    book[b].getMAMBooks(myx_args.params.session, bf, myx_args.params.ebooks, myx_args.params.fixid3)
-                    if (book[b].bestMAMMatch is not None):
-                        book[b].metadata = "mam"
+                    #if this book is NOT a multibook, try MAM metadata search, if this is a collection, ignore MAM
+                    if not myx_utilities.isMultiBookCollection(book[b].files[0].file):
+                        mamBestMatch = book[b].getAudibleBooks(httpx, book[b].bestMAMMatch, myx_args.params.fixid3)
+                        #Override mamBest match if id3 has higher match rate, or if MAM didn't match
+                        if (id3BestMatch is not None) and (mamBestMatch is not None):
+                            #A match was found using either metadata
+                            if id3BestMatch.matchRate > mamBestMatch.matchRate:
+                                #Replace bestAudibleMatch with the better matchrate
+                                book[b].bestAudibleMatch = id3BestMatch
+                                book[b].metadata = "audible"
+                            else:
+                                book[b].metadata = "mam-audible"
+                        elif (id3BestMatch is not None) and (mamBestMatch is None):
+                            #Replace bestAudibleMatch with the better matchrate
+                            book[b].bestAudibleMatch = id3BestMatch
+                            book[b].metadata = "audible"
 
-                if (myx_args.params.ebooks):
-                    break
-                
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()
                 
@@ -301,6 +308,10 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
 
 
 def main():
+    #make sure log_path exists
+    if not os.path.exists(os.path.abspath(myx_args.params.log_path)):
+        os.makedirs(os.path.abspath(myx_args.params.log_path), exist_ok=True)
+
     #create the logfile
     logfile=os.path.join(os.path.abspath(myx_args.params.log_path),f"booktree_log_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv")
 
@@ -330,21 +341,6 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(os.getcwd(), "__cache__", "book"), exist_ok=True)
         os.makedirs(os.path.join(os.getcwd(), "__cache__", "mam"), exist_ok=True)
         os.makedirs(os.path.join(os.getcwd(), "__cache__", "audible"), exist_ok=True)
-
-        # test RE titles
-        # book=myx_classes.Book()
-        # myx_utilities.getBookFromTag("The Seeress of Kell (Malloreon 5), Part 2", book)
-        # print ("\n\n")
-
-        # myx_utilities.getBookFromTag("Polgara the Sorceress, Part 1", book)
-        # print ("\n\n")
-
-        # myx_utilities.getBookFromTag("Dark-Hunter 23 - Styxx - Part 3", book)
-        # print ("\n\n")
-
-        #set
-        #pprint(myx_args.params)
-        #myx_args.params.verbose=True
 
         #start the program
         main()

@@ -69,8 +69,19 @@ class Book:
         return title
     
     def getCleanTitle(self):
-        #Removes (Unabdridged from the title)
-        return myx_utilities.cleanseTitle(self.title, True, True)
+        #remove author
+        title = self.title
+        for author in self.authors:
+            title = re.sub (f"{author.name}", "", title, flags=re.IGNORECASE)
+
+        # #remove series
+        for s in self.series:
+            title = re.sub (f"{s.name}", "", title, flags=re.IGNORECASE)
+
+        #Remove the rest
+        title = myx_utilities.cleanseTitle(title, True, True)
+        
+        return title
     
     def getAuthors(self, delimiter=",", encloser="", stripaccents=True):
         if len(self.authors):
@@ -213,11 +224,14 @@ class BookFile:
         if 'album' in metadata: book.series.append(Series(metadata["album"],""))
         #parse authors
         if 'artist' in metadata: 
-            for author in metadata["artist"].split(","):
-                book.authors.append((Contributor(myx_utilities.removeGA(author))))
+            #remove everything in parentheses firstm before parsing
+            artist = re.sub(r"\(.+\)", "", metadata["artist"], flags=re.IGNORECASE)
+            for author in artist.split(","):
+                book.authors.append(Contributor(myx_utilities.removeGA(author)))
         #parse narrators
         if 'composer' in metadata: 
-            for narrator in metadata["composer"].split(","):
+            composer = re.sub(r"\(.+\)", "", metadata["composer"], flags=re.IGNORECASE)
+            for narrator in composer.split(","):
                 book.narrators.append(Contributor(narrator))
         #duration in minutes
         book.duration = duration
@@ -344,11 +358,17 @@ class MAMBook:
             if 'album' in metadata: book.series.append(Series(metadata["album"],""))
             #parse authors
             if 'artist' in metadata: 
-                for author in metadata["artist"].split(","):
+                #remove everything in parentheses firstm before parsing
+                artist = re.sub("\([.+]\)", "", metadata["artist"], flags=re.IGNORECASE)
+                print (f"id3-artist: {metadata['artist']}\nArtist: {artist}")
+                for author in re.split(",", artist):
                     book.authors.append(Contributor(myx_utilities.removeGA(author)))
             #parse narrators
             if 'composer' in metadata: 
-                for narrator in metadata["composer"].split(","):
+                composer = re.sub("\([.+]\)", "", metadata["composer"], flags=re.IGNORECASE)
+                for narrator in re.split(",", composer):
+                    #remove any occurrence of (Narrator)
+                    narrator = re.sub("\([.]+\)", "", narrator, flags=re.IGNORECASE)       
                     book.narrators.append(Contributor(narrator))
         
         #return a book object created from  ffprobe
@@ -379,112 +399,118 @@ class MAMBook:
         paths.append(sPath)
         return paths  
 
-    def getAudibleBooks(self, client, fixid3=False):
+    def getAudibleBooks(self, client, book, fixid3=False):
 
         books=[]
-        language="english"
-        book = self.ffprobeBook
-        title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
-
-        #Search Audible using either MAM (better) or ffprobe metadata
-        if (not myx_args.params.multibook) and (self.bestMAMMatch is not None):
-            book = self.bestMAMMatch
-            title = book.getCleanTitle()
-            language = book.language
-
-        # if bad ffprobe data or fixid3, make it better?
-        if (len(book.title) == 0) or (fixid3):
-            book.title = myx_utilities.getAltTitle (self.name, book) 
+        if (book is not None):
+            language=book.language
+            # book = self.ffprobeBook
+            if (len(book.title) == 0) or (fixid3):
+                book.title = myx_utilities.getAltTitle (self.name, book) 
+                
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
-        #pprint(book)
-        #sometimes Audible returns nothing if there's too much info in the keywords
-        series=""
-        if (len(book.series)==1):
-            series = myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)
-        elif len(book.series):
-            series = myx_utilities.cleanseTitle(book.series[0].name, stripUnabridged=True)
-        
-        keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
-                                            series,
-                                            myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" ")), 
-                                            myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" "))])
-        #print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
-        
-        #generate author, narrator combo
-        author_narrator=[]
-        for i in range(len(book.authors)):
-            if len(book.narrators):
-                for j in range(len(book.narrators)):
-                    author_narrator.append((book.authors[i].name, book.narrators[j].name))
-            else:
-                    author_narrator.append((book.authors[i].name, ""))
+            #Search Audible using either MAM (better) or ffprobe metadata
+            # if (not myx_args.params.multibook) and (self.bestMAMMatch is not None):
+            #     book = self.bestMAMMatch
+            #     title = book.getCleanTitle()
+            #     language = book.language
 
-        #print (author_narrator)
+            # if bad ffprobe data or fixid3, make it better?
+            # if (len(book.title) == 0) or (fixid3):
+            #     book.title = myx_utilities.getAltTitle (self.name, book) 
+            #     title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
-        for an in author_narrator:
-            #print (f"Author: {an[0]}\tNarrator: {an[1]}")
-            sAuthor=myx_utilities.cleanseAuthor(an[0])
-            sNarrator=myx_utilities.cleanseAuthor(an[1])
-            books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords, language=language)
-
-            #book found, exit for loop
-            if ((books is not None) and len(books)):
-                break
+            #pprint(book)
+            #sometimes Audible returns nothing if there's too much info in the keywords
+            series=""
+            if (len(book.series)==1):
+                series = myx_utilities.cleanseTitle(book.getSeries(), stripUnabridged=True)
+            elif len(book.series):
+                series = myx_utilities.cleanseTitle(book.series[0].name, stripUnabridged=True)
             
-        #too constraining?  try just a keywords search with all information
-        if ((books is None) or ((books is not None) and (len(books) == 0))):
-            #print (f"Nothing was found so just doing a keyword search {keywords}")
-            books=myx_audible.getAudibleBook (client, keywords=keywords, language=language)
-
-        if not myx_args.params.multibook:
-            mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getCleanTitle(), series])
-        else:
-            mamBook = '|'.join([book.getAuthors(), book.getCleanTitle(), series])
-
-        #process search results
-        self.audibleMatches=books
-        if (self.audibleMatches is not None):
-            if (myx_args.params.verbose):
-                print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
-
-            bestMatchRate=0
-            #find the best match
-            print(f"Finding the best Audible match out of {len(books)} results")
-            for product in books:
-                abook=myx_audible.product2Book(product)
-                #the author is known, check if this book is this authors book
-                #otherwise, if maybe this title is close enough
-                #print (f"{abook.title} by {abook.authors}...")
-                if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook):
-                    if not myx_args.params.multibook:
-                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                    else:
-                        audibleBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                elif myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate): 
-                    if not myx_args.params.multibook:
-                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getCleanTitle(), abook.getSeriesParts()])
-                    else:
-                        audibleBook = '|'.join([abook.getCleanTitle(), abook.getSeriesParts()])
+            keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+                                                series,
+                                                myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" ")), 
+                                                myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" "))])
+            #print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
+            
+            #generate author, narrator combo
+            author_narrator=[]
+            for i in range(len(book.authors)):
+                if len(book.narrators):
+                    for j in range(len(book.narrators)):
+                        author_narrator.append((book.authors[i].name, book.narrators[j].name))
                 else:
-                    print (f"This book doesn't have a matching title or author, checking the next book...")
-                    continue        
+                        author_narrator.append((book.authors[i].name, ""))
 
-                #include this book in the comparison
-                matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
-                abook.matchRate=matchRate["partial"]
+            #print (author_narrator)
 
-                print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}\n")
+            for an in author_narrator:
+                #print (f"Author: {an[0]}\tNarrator: {an[1]}")
+                sAuthor=myx_utilities.cleanseAuthor(an[0])
+                sNarrator=myx_utilities.cleanseAuthor(an[1])
+                books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords, language=language)
+
+                #book found, exit for loop
+                if ((books is not None) and len(books)):
+                    break
                 
-                if (matchRate["partial"] > bestMatchRate):
-                    bestMatchRate=matchRate["partial"]
-                    self.bestAudibleMatch=abook
+            #too constraining?  try just a keywords search with all information
+            if ((books is None) or ((books is not None) and (len(books) == 0))):
+                #print (f"Nothing was found so just doing a keyword search {keywords}")
+                books=myx_audible.getAudibleBook (client, keywords=keywords, language=language)
+
+            if not myx_args.params.multibook:
+                mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getCleanTitle(), series])
+            else:
+                mamBook = '|'.join([book.getAuthors(), book.getCleanTitle(), series])
+
+            #process search results
+            self.audibleMatches=books
+            if (self.audibleMatches is not None):
+                if (myx_args.params.verbose):
+                    print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
+
+                bestMatchRate=0
+                #find the best match
+                print(f"Finding the best Audible match out of {len(books)} results")
+                for product in books:
+                    abook=myx_audible.product2Book(product)
+                    #the author is known, check if this book is this authors book
+                    #otherwise, if maybe this title is close enough
+                    #print (f"{abook.title} by {abook.authors}...")
+                    if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook):
+                        if not myx_args.params.multibook:
+                            audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        else:
+                            audibleBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                    elif myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate): 
+                        if not myx_args.params.multibook:
+                            audibleBook = '|'.join([f"Duration:{abook.length}min",  abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        else:
+                            audibleBook = '|'.join([ abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                    else:
+                        print (f"This book doesn't have a matching title or author, checking the next book...")
+                        continue        
+
+                    #include this book in the comparison
+                    matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
+                    abook.matchRate=matchRate["token_sort"]
+
+                    print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}\n")
+                    
+                    if (matchRate["token_sort"] > bestMatchRate):
+                        bestMatchRate=matchRate["token_sort"]
+                        self.bestAudibleMatch=abook
+        #end if
 
         #pprint(self.bestAudibleMatch)
-        if (books is not None):             
-            return len(books) 
+        if (books is not None): 
+            #pprint (books)            
+            return self.bestAudibleMatch
         else: 
-            return 0
+            return None
         
     def createHardLinks(self, targetFolder, dryRun=False):
 
