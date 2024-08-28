@@ -332,40 +332,31 @@ def getHash(key):
     return hashlib.sha256(key.encode(encoding="utf-8")).hexdigest()
 
 def isCached(key, category):
-    if (myx_args.params.no_cache):
-        return False
-    else:
-        if myx_args.params.verbose:
-            print (f"Checking cache: {category}/{key}...")
-        
-        #Check if this book's hashkey exists in the cache, if so - it's been processed
-        bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
-        found = os.path.exists(bookFile)  
-        return found      
+    if myx_args.params.verbose:
+        print (f"Checking cache: {category}/{key}...")
+    
+    #Check if this book's hashkey exists in the cache, if so - it's been processed
+    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    found = os.path.exists(bookFile)  
+    return found      
     
 def cacheMe(key, category, content):
-    if (myx_args.params.no_cache):
-        return False
-    else:    
-        #create the cache file
-        bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
-        with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
-            file.write(json.dumps(content))
-    
-        if myx_args.params.verbose:
-            print(f"Caching {key} in File: {bookFile}")
-        return os.path.exists(bookFile)        
+    #create the cache file
+    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
+        file.write(json.dumps(content))
+
+    if myx_args.params.verbose:
+        print(f"Caching {key} in File: {bookFile}")
+    return os.path.exists(bookFile)        
 
 def loadFromCache(key, category):
-    if (myx_args.params.no_cache):
-        return None
-    else:    
-        #return the content from the cache file
-        bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
-        with open(bookFile, mode='r', encoding='utf-8') as file:
-            f = file.read()
-        
-        return json.loads(f)
+    #return the content from the cache file
+    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    with open(bookFile, mode='r', encoding='utf-8') as file:
+        f = file.read()
+    
+    return json.loads(f)
     
 def isMultiCD(parent):
     return re.search("disc\s?\d+", parent.lower()) or re.search("cd\s?\d+", parent.lower())
@@ -412,7 +403,20 @@ def isThisMyBookTitle (title, book, matchrate=0):
     if myx_args.params.verbose:
         print (f"Checking if {thisTitle} or {thisSeriesTitle} matches my book {mytitle}: {matchname} or {matchseriesname}")
 
-    return  (matchname["token_sort"] >= matchrate) or (matchseriesname["token_sort"] >= matchrate)
+    #see if any of the fuzzy match scores are within guidance
+    match=False
+    for k in matchname.keys():
+        if matchname[k] >= matchrate:
+            match=True
+            break
+
+    if not match:
+        for k in matchseriesname.keys():
+            if matchseriesname[k] >= matchrate:
+                match=True
+                break
+
+    return match
     
 def getAltTitle(parent, book):
     stop = False

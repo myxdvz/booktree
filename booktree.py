@@ -230,7 +230,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
     for b in book.keys():    
         #if this book has not been processed before AND it is not a multibook collection
         #print (f"Book: {b} isCached: {book[b].isCached('book')}")
-        if (not book[b].isCached("book")):
+        if ((myx_args.params.no_cache) or (not book[b].isCached("book"))):
             #process the book
             print(f"Processing: {book[b].name}...")
             normalBooks.append(book[b])            

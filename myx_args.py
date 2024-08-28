@@ -25,7 +25,7 @@ def importArgs():
     parser.add_argument("--verbose", default=False, action="store_true", help="If provided, will print additional info")
     #Advanced flags
     parser.add_argument("--no-opf", default=False, action="store_true", help="If provided, skips OPF file")
-    parser.add_argument("--no-cache", default=False, action="store_true", help="If provided, skips caching")
+    parser.add_argument("--no-cache", default=False, action="store_true", help="If provided, processes books that have been processed/cached before")
     parser.add_argument("--multibook", default=False, action="store_true", help="If provided, will process books at file level")
     parser.add_argument("--fixid3", default=False, action="store_true", help="If provided, will attempt to fix id3 metadata")
     parser.add_argument("--ebooks", default=False, action="store_true", help="If provided, will look for ebooks and skip audible")
