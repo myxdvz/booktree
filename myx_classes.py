@@ -257,7 +257,7 @@ class BookFile:
             os.makedirs(destination, exist_ok=True)
         
         #check if the file already exists in the target directory
-        filename=os.path.join(destination, os.path.basename(source).split('/')[-1])
+        filename=os.path.join(destination, os.path.basename(source).split(os.sep)[-1])
         if (not os.path.exists(filename)):
             try:
                 #print (f"Hardlinking {source} to {filename}")

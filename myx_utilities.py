@@ -211,7 +211,7 @@ def isCollection (bookFile):
     #we assume that most books are formatted this way /Book/Files.m4b
     #we assume that this is a collection, if the file is 3 levels deep, /Book/Another Book or CD/Files.m4b
 
-    relPath = os.path.relpath(bookFile, myx_args.params.source_path).split("/")
+    relPath = os.path.relpath(bookFile, myx_args.params.source_path).split(os.sep)
     return (len(relPath) > 2)
 
 def findBestMatch(targetBook, books):
