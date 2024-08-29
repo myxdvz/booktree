@@ -115,6 +115,12 @@ class Book:
             for author in authors.split (","):
                 self.authors.append(Contributor(author))
 
+    def setNarrators(self, narrators):
+        #Given a csv of authors, convert it to a list
+        if len(narrators.strip()):
+            for narrator in narrators.split (","):
+                self.narrators.append(Contributor(narrator))
+
     def setSeries(self, series):
         #Given a csv of authors, convert it to a list
         #print (f"Parsing series {series}")
@@ -286,11 +292,23 @@ class BookFile:
             #Does this book belong in a series - only take the first series?
             sPath=""
             if (len(book.series) > 0):
-                sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseSeries(book.series[0].name)), 
+                #add narrator in path
+                if (myx_args.params.add_narrators) and (len(book.narrators)):
+                    series = f"{myx_utilities.cleanseSeries(book.series[0].name)} {{{book.getNarrators()}}}"
+                else:
+                    series = f"{myx_utilities.cleanseSeries(book.series[0].name)}"
+
+                sPath=os.path.join(stdAuthor, sanitize_filename(series), 
                                         sanitize_filename(f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}"),
                                         sanitize_filename(disc))
             else:
-                sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseTitle(book.title), disc))
+                #add narrator in path
+                if (myx_args.params.add_narrators) and (len(book.narrators)):
+                    title = f"{myx_utilities.cleanseTitle(book.title)} {{{book.getNarrators()}}}"
+                else:
+                    title = f"{myx_utilities.cleanseTitle(book.title)}"
+
+                sPath=os.path.join(stdAuthor, sanitize_filename(title, disc))
 
             paths.append(sPath)
 
@@ -376,29 +394,6 @@ class MAMBook:
 
         return book
 
-    def getTargetPaths(self, authors, series, title, disc=""):
-        paths=[]
-        #Get primary author
-        if ((authors is not None) and (len(authors) == 0)):
-            author="Unknown"
-        else:
-            author=authors[0].name  
-
-        #standardize author name (replace . with space, and then make sure that there's only single space)
-        stdAuthor=sanitize_filename(myx_utilities.cleanseAuthor(author))
-
-        #Does this book belong in a series - only take the first series?
-        sPath=""
-        if (len(series) > 0):
-            sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseSeries(series[0].name)), 
-                                      sanitize_filename(f"{myx_utilities.cleanseSeries(series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(title)}"),
-                                      sanitize_filename(disc))
-        else:
-            sPath=os.path.join(stdAuthor, sanitize_filename(myx_utilities.cleanseTitle(title)), sanitize_filename(disc))
-
-        paths.append(sPath)
-        return paths  
-
     def getAudibleBooks(self, client, book, fixid3=False):
 
         books=[]
@@ -461,10 +456,9 @@ class MAMBook:
                 #print (f"Nothing was found so just doing a keyword search {keywords}")
                 books=myx_audible.getAudibleBook (client, keywords=keywords, language=language)
 
-            if not myx_args.params.multibook:
-                mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getCleanTitle(), series])
-            else:
-                mamBook = '|'.join([book.getAuthors(), book.getCleanTitle(), series])
+            mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getCleanTitle(), series])
+            if myx_args.params.add_narrators:
+                mamBook = '|'.join([mamBook, book.getNarrators()])
 
             #process search results
             self.audibleMatches=books
@@ -481,15 +475,13 @@ class MAMBook:
                     #otherwise, if maybe this title is close enough
                     #print (f"{abook.title} by {abook.authors}...")
                     if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook):
-                        if not myx_args.params.multibook:
-                            audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        else:
-                            audibleBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        if myx_args.params.add_narrators:
+                            audibleBook = '|'.join([audibleBook, abook.getNarrators()])
                     elif myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate): 
-                        if not myx_args.params.multibook:
-                            audibleBook = '|'.join([f"Duration:{abook.length}min",  abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        else:
-                            audibleBook = '|'.join([ abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        if myx_args.params.add_narrators:
+                            audibleBook = '|'.join([audibleBook, abook.getNarrators()])
                     else:
                         print (f"This book doesn't have a matching title or author, checking the next book...")
                         continue        

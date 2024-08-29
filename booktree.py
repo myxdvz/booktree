@@ -42,12 +42,13 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                         bf=myx_classes.BookFile(f, fullpath, path, isHardlinked=bool(row["isHardLinked"]))
                         
                         #parse authors and series
-                        bf.ffprobeBook = myx_classes.Book(asin=str(row["id3-asin"]), title=str(row["id3-title"]), subtitle=row["id3-subtitle"], publicationName=row["id3-publicationName"], length=row["id3-length"], duration=row["id3-duration"])
+                        bf.ffprobeBook = myx_classes.Book(asin=str(row["id3-asin"]), title=str(row["id3-title"]), subtitle=row["id3-subtitle"], publicationName=row["id3-publicationName"], length=row["id3-length"], duration=row["id3-duration"], language="english")
                         bf.ffprobeBook.setAuthors(row["id3-authors"])
+                        bf.ffprobeBook.setNarrators(row["id3-narrators"])
                         bf.ffprobeBook.setSeries(row["id3-seriesparts"])
 
                         #does this book exist?
-                        hashKey=myx_utilities.getHash(row["book"])
+                        hashKey=myx_utilities.getHash(f"{i}-{row['book']}")
                         if (hashKey in book):
                             #print (f"{str(row["book"])} exists, just adding the file {bf.file}")
                             book[hashKey].files.append(bf)
@@ -73,10 +74,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
         for b in book.keys():
             #try and match again, the assumption, is that the log has the right information
             #TODO: Check if the file has been processed before, if so skip
-            if (book[b].isCached("book")):
-                #Skipping
-                print (f"Skipping {book[b].name}, already processed...")
-            else:
+            if ((myx_args.params.no_cache) or (not book[b].isCached("book"))):
                 #file hasn't been processed, but do we need to do a metadata lookup?
                 allFiles.append(book[b])
                 if (book[b].metadata != "as-is"):
@@ -98,7 +96,7 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                         #book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
                         #now, Search Audible using either MAM (better) or ffprobe metadata
                         if (not myx_args.params.ebooks):
-                            book[b].getAudibleBooks(httpx, myx_args.params.fixid3)
+                            book[b].getAudibleBooks(httpx, book[b].ffprobeBook, myx_args.params.fixid3)
                             if (book[b].bestAudibleMatch is not None):
                                 book[b].metadata = "audible"                    
 
@@ -114,6 +112,9 @@ def buildTreeFromLog(path, mediaPath, logfile, dryRun=False):
                 else:
                     #if metadata == as is, use the id3 tag as is
                     matchedFiles.append(book[b])
+            else:
+                print (f"Skipping {book[b].name}, already processed...")
+
 
         # #Create Hardlinks
         print (f"\nCreating Hardlinks for {len(matchedFiles)} matched books")
@@ -245,7 +246,7 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
                     book[b].metadata = "mam"
                     isForeignBook = (book[b].bestMAMMatch.language.lower() !=  "english")
             
-            #Audible search only if this is not ebooks and metadatasource includes audible, otherwise MAM search is enough
+            #Audible search only if this is not ebooks/multibook and metadatasource includes audible, otherwise MAM search is enough
             if (not myx_args.params.ebooks) and ((myx_args.params.metadata == "audible") or (myx_args.params.metadata == "mam-audible")):
                 if isForeignBook:
                     #if bestMAMMatch is a foreign book, getAudible using MAM Metadata
@@ -253,13 +254,16 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
                     if (book[b].bestAudibleMatch is not None):
                         book[b].metadata = "audible"
                 else:
+                    #reset metadata source to be id3
+                    book[b].metadata = "id3"
+
                     #This is not a foreign book, do an Audible Search using id3 values first   
                     id3BestMatch = book[b].getAudibleBooks(httpx, book[b].ffprobeBook, myx_args.params.fixid3)
                     if (book[b].bestAudibleMatch is not None):
                         book[b].metadata = "audible" 
 
                     #if this book is NOT a multibook, try MAM metadata search, if this is a collection, ignore MAM
-                    if not myx_utilities.isMultiBookCollection(book[b].files[0].file):
+                    if (not myx_args.params.multibook) and (not myx_utilities.isMultiBookCollection(book[b].files[0].file)):
                         mamBestMatch = book[b].getAudibleBooks(httpx, book[b].bestMAMMatch, myx_args.params.fixid3)
                         #Override mamBest match if id3 has higher match rate, or if MAM didn't match
                         if (id3BestMatch is not None) and (mamBestMatch is not None):
@@ -267,8 +271,6 @@ def buildTreeFromHybridSources(path, mediaPath, logfile, dryRun=False):
                             if id3BestMatch.matchRate > mamBestMatch.matchRate:
                                 #Replace bestAudibleMatch with the better matchrate
                                 book[b].bestAudibleMatch = id3BestMatch
-                                book[b].metadata = "audible"
-                            else:
                                 book[b].metadata = "audible"
                         elif (id3BestMatch is not None) and (mamBestMatch is None):
                             #Replace bestAudibleMatch with the better matchrate

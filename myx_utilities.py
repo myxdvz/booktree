@@ -100,7 +100,7 @@ def optimizeKeys(keywords, delim=" "):
     #keywords is a list of stuff, we want to convert it in a comma delimited string
     kw=[]
     for k in keywords:
-        for c in [".", ":", "_", "[", "]", "'", "{", "}", ",", ";", "(", ")"]:
+        for c in [".", ":", "_", "[", "]", "{", "}", ",", ";", "(", ")"]:
             k = k.replace(c, " ")
 
         #print(k)
@@ -500,6 +500,7 @@ def isMultiBookCollection(filePath):
     path, file = os.path.split(filePath)    
     #how deep is it from the source?
     filedepth = len(path.split(os.sep)) + 1
+    print (f"File depth of {filePath} is {filedepth}")
     # if the filedepth from source is 3 levels down, assume it's a multibook collection
     isMBC = (filedepth >= 3)
     return isMBC
