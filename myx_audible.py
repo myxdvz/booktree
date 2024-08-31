@@ -4,16 +4,14 @@ from pprint import pprint
 import json
 import myx_utilities
 import myx_classes
-import myx_args
 
-def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords="", language="english"):
+def getAudibleBook(client, cfg, asin="", title="", authors="", narrators="", keywords="", language="english"):
     print (f"Searching Audible for\n\tasin:{asin}\n\ttitle:{title}\n\tauthors:{authors}\n\tnarrators:{narrators}\n\tkeywords:{keywords}")
 
     enBooks=[]
     cacheKey = myx_utilities.getHash(f"{asin}{title}{authors}{narrators}{keywords}")
-    if myx_utilities.isCached(cacheKey, "audible"):
-        if myx_args.params.verbose:
-            print (f"Retrieving {cacheKey} from audible")
+    if myx_utilities.isCached(cacheKey, "audible", cfg):
+        print (f"Retrieving {cacheKey} from audible")
 
         #this search has been done before, retrieve the results
         books = myx_utilities.loadFromCache(cacheKey, "audible")
@@ -44,7 +42,7 @@ def getAudibleBook(client, asin="", title="", authors="", narrators="", keywords
             books = r.json()
 
             #cache this results
-            myx_utilities.cacheMe(cacheKey, "audible", books)
+            myx_utilities.cacheMe(cacheKey, "audible", books, cfg)
 
         except Exception as e:
                 print(f"Error searching audible: {e}")
@@ -127,6 +125,8 @@ def product2Book(product):
         if 'series' in product: 
             for s in product["series"]:
                 book.series.append(myx_classes.Series(str(s["title"]), str(s["sequence"])))
+        if 'language' in product: book.language=str(product ["language"])
+
             
         return book
     else:

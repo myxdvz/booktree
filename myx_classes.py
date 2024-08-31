@@ -12,7 +12,6 @@ from itertools import permutations
 from pathvalidate import sanitize_filename
 import myx_utilities
 import myx_audible
-import myx_args
 import myx_mam
 
 #Module variables
@@ -30,10 +29,11 @@ class Contributor:
 class Series:
     name:str=""
     part:str=""
+    separator:str=""
     
     def getSeriesPart(self):
         if (len(self.part.strip()) > 0):
-            return f"{self.name} #{str(self.part)}"
+            return f"{self.name} {self.separator}{str(self.part)}"
         else:
             return self.name
 
@@ -105,7 +105,7 @@ class Book:
         seriesparts = []
         for s in self.series:
             if len(s.name.strip()):
-                seriesparts.append(Contributor(f"{s.name} #{s.part}")) 
+                seriesparts.append(Contributor(f"{s.name} {s.separator}{s.part}")) 
             
         return myx_utilities.getList(seriesparts, delimiter, encloser, stripaccents=True) 
     
@@ -145,6 +145,7 @@ class Book:
         book[f"{ns}authors"]=self.getAuthors()
         book[f"{ns}narrators"]=self.getNarrators()
         book[f"{ns}seriesparts"]=self.getSeriesParts()
+        book[f"{ns}language"]=self.language
         return book  
     
     def init(self):
@@ -174,6 +175,7 @@ class BookFile:
     file:posixpath
     fullPath:str
     sourcePath:str
+    mediaPath:str
     isMatched:bool=False
     isHardlinked:bool=False
     audibleMatch:Book=None
@@ -213,8 +215,7 @@ class BookFile:
             metadata= r["format"]["tags"]
         except Exception as e:
             metadata=dict()
-            if myx_args.params.verbose:
-                print (f"ffprobe failed on {self.file}: {e}")
+            print (f"ffprobe failed on {self.file}: {e}")
 
         #parse and create a book object
         # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
@@ -248,30 +249,33 @@ class BookFile:
         return book
     
     def hardlinkFile(self, source, target):
-        #add target to base Media folder
-        destination = os.path.join(myx_args.params.media_path, target)
+
         #check if the target path exists
-        if (not os.path.exists(destination)):
+        if (not os.path.exists(target)):
             #make dir path
-            print (f"Creating target directory: {destination} ")
-            os.makedirs(destination, exist_ok=True)
+            print (f"\tCreating target directory: {target} ")
+            os.makedirs(target, exist_ok=True)
         
         #check if the file already exists in the target directory
-        filename=os.path.join(destination, os.path.basename(source).split(os.sep)[-1])
+        filename=os.path.join(target, os.path.basename(source).split(os.sep)[-1])
         if (not os.path.exists(filename)):
             try:
                 #print (f"Hardlinking {source} to {filename}")
                 os.link(source, filename)
                 self.isHardlinked=True
             except Exception as e:
-                print (f"Failed to hardlink {source} to {filename} due to {e}")
+                print (f"\tFailed due to {e}")
         else:
-            print (f"Skipped Hardlinking {source} to {filename} : exists")
+            print (f"\tSkipped : {filename} exists")
                 
         return self.isHardlinked
     
-    def getTargetPaths(self, book):
-        paths=[]
+    def getConfigTargetPath(self, cfg, book):
+        #Config
+        media_path = self.mediaPath
+        in_series = cfg.get("Config/target_path/in_series")
+        no_series = cfg.get("Config/target_path/no_series")
+
         if (book is not None):
             #Get primary author
             if ((book.authors is not None) and (len(book.authors) == 0)):
@@ -280,41 +284,104 @@ class BookFile:
                 author=book.authors[0].name  
 
             #standardize author name (replace . with space, and then make sure that there's only single space)
-            stdAuthor=sanitize_filename(myx_utilities.cleanseAuthor(author))
+            author=myx_utilities.cleanseAuthor(author)
+
+            #Get primary narrator
+            if ((book.narrators is not None) and (len(book.authors) == 0)):
+                narrators=""
+            else:
+                narrators=book.getNarrators()
 
             #is this a MultiCd file?
             disc = self.getParentFolder()
-            #print (f"File: {self.file}\nParent: {disc}")
-
             if (not myx_utilities.isMultiCD(disc)):
                 disc = ""
 
             #Does this book belong in a series - only take the first series?
-            sPath=""
+            series=""
+            part=""
             if (len(book.series) > 0):
-                #add narrator in path
-                if (myx_args.params.add_narrators) and (len(book.narrators)):
-                    series = f"{myx_utilities.cleanseSeries(book.series[0].name)} {{{book.getNarrators()}}}"
-                else:
-                    series = f"{myx_utilities.cleanseSeries(book.series[0].name)}"
+                series = f"{myx_utilities.cleanseSeries(book.series[0].name)}"
+                part = str(book.series[0].part)
 
-                sPath=os.path.join(stdAuthor, sanitize_filename(series), 
-                                        sanitize_filename(f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}"),
-                                        sanitize_filename(disc))
+            title = f"{myx_utilities.cleanseTitle(book.title)}"
+
+            tokens = {}
+            tokens["author"] = sanitize_filename(author)
+            tokens["series"] = sanitize_filename(series)
+            tokens["part"] = sanitize_filename(part)
+            tokens["title"] = sanitize_filename(title)
+            tokens["disc"] = sanitize_filename(disc)
+            tokens["narrators"] = f"{{{sanitize_filename(narrators)}}}"
+
+            sPath = ""
+            if len(book.series):
+                x = in_series.format (**tokens)
+                #use in_series format
+                for p in x.split ("/"):
+                    sPath=os.path.join (sPath, p)
             else:
-                #add narrator in path
-                if (myx_args.params.add_narrators) and (len(book.narrators)):
-                    title = f"{myx_utilities.cleanseTitle(book.title)} {{{book.getNarrators()}}}"
-                else:
-                    title = f"{myx_utilities.cleanseTitle(book.title)}"
+                y = no_series.format (**tokens)
+                #use no_series format
+                for p in y.split ("/"):
+                    sPath=os.path.join (sPath, p)
 
-                sPath=os.path.join(stdAuthor, sanitize_filename(title, disc))
+            #add disc for multidisc
+            if len(disc):
+                sPath=os.path.join(sPath, sanitize_filename(tokens["title"], tokens["disc"]))
 
-            paths.append(sPath)
-
-            return paths  
+            return os.path.join(media_path, sPath)  
     
-    def getLogRecord(self, bookMatch:Book):
+    def getTargetPaths(self, book, cfg):
+        return self.getConfigTargetPath(cfg, book)
+        # #Config
+        # add_narrators = bool (cfg.get("Config/flags/add_narrators"))
+
+        # paths=[]
+        # if (book is not None):
+        #     #Get primary author
+        #     if ((book.authors is not None) and (len(book.authors) == 0)):
+        #         author="Unknown"
+        #     else:
+        #         author=book.authors[0].name  
+
+        #     #standardize author name (replace . with space, and then make sure that there's only single space)
+        #     stdAuthor=sanitize_filename(myx_utilities.cleanseAuthor(author))
+
+        #     #is this a MultiCd file?
+        #     disc = self.getParentFolder()
+        #     #print (f"File: {self.file}\nParent: {disc}")
+
+        #     if (not myx_utilities.isMultiCD(disc)):
+        #         disc = ""
+
+        #     #Does this book belong in a series - only take the first series?
+        #     sPath=""
+        #     if (len(book.series) > 0):
+        #         #Set separator
+        #         #add narrator in path
+        #         if (add_narrators) and (len(book.narrators)):
+        #             series = f"{myx_utilities.cleanseSeries(book.series[0].name)} {{{book.getNarrators()}}}"
+        #         else:
+        #             series = f"{myx_utilities.cleanseSeries(book.series[0].name)}"
+
+        #         sPath=os.path.join(stdAuthor, sanitize_filename(series), 
+        #                                 sanitize_filename(f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}"),
+        #                                 sanitize_filename(disc))
+        #     else:
+        #         #add narrator in path
+        #         if (add_narrators) and (len(book.narrators)):
+        #             title = f"{myx_utilities.cleanseTitle(book.title)} {{{book.getNarrators()}}}"
+        #         else:
+        #             title = f"{myx_utilities.cleanseTitle(book.title)}"
+
+        #         sPath=os.path.join(stdAuthor, sanitize_filename(title, disc))
+
+        #     paths.append(sPath)
+
+        #     return paths  
+    
+    def getLogRecord(self, bookMatch:Book, cfg):
         #returns a dictionary of the record that gets logged
         book={
             "file":self.fullPath,
@@ -323,7 +390,9 @@ class BookFile:
         }
 
         book=bookMatch.getDictionary(book)
-        book["paths"]=",".join(self.getTargetPaths(bookMatch))
+
+        if cfg.get("Config/metadata") != "log":
+            book["paths"]=self.getConfigTargetPath(cfg, bookMatch)
 
         return book
     
@@ -341,6 +410,8 @@ class MAMBook:
     isMultiBookCollection:bool=False
     metadata:str="id3"
     metadataBook:Book=None
+    paths:str=""
+    isMatched:bool=False
 
     def getRunTimeLength(self):
         #add all the duration of the files in the book, and convert into minutes
@@ -358,8 +429,7 @@ class MAMBook:
         try:
             metadata=myx_utilities.probe_file(file)["format"]["tags"]
         except Exception as e:
-            if myx_args.params.verbose:
-                print (f"ffprobe failed on {self.name}: {e}")
+            print (f"ffprobe failed on {self.name}: {e}")
 
         if (metadata is not None):
             #parse and create a book object
@@ -394,29 +464,22 @@ class MAMBook:
 
         return book
 
-    def getAudibleBooks(self, client, book, fixid3=False):
+    def getAudibleBooks(self, client, book, cfg):
+        #Config variables
+        matchrate = int(cfg.get("Config/matchrate"))
+        fixid3 = bool(cfg.get("Config/flags/fixid3"))
+        verbose = bool(cfg.get("Config/flags/verbose"))
+        add_narrators = bool(cfg.get("Config/flags/add_narrators"))
 
         books=[]
         if (book is not None):
             language=book.language
             # book = self.ffprobeBook
             if (len(book.title) == 0) or (fixid3):
-                book.title = myx_utilities.getAltTitle (self.name, book) 
+                book.title = myx_utilities.getAltTitle (self.name, book, cfg) 
                 
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
-            #Search Audible using either MAM (better) or ffprobe metadata
-            # if (not myx_args.params.multibook) and (self.bestMAMMatch is not None):
-            #     book = self.bestMAMMatch
-            #     title = book.getCleanTitle()
-            #     language = book.language
-
-            # if bad ffprobe data or fixid3, make it better?
-            # if (len(book.title) == 0) or (fixid3):
-            #     book.title = myx_utilities.getAltTitle (self.name, book) 
-            #     title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
-
-            #pprint(book)
             #sometimes Audible returns nothing if there's too much info in the keywords
             series=""
             if (len(book.series)==1):
@@ -445,7 +508,7 @@ class MAMBook:
                 #print (f"Author: {an[0]}\tNarrator: {an[1]}")
                 sAuthor=myx_utilities.cleanseAuthor(an[0])
                 sNarrator=myx_utilities.cleanseAuthor(an[1])
-                books=myx_audible.getAudibleBook (client, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords, language=language)
+                books=myx_audible.getAudibleBook (client, cfg, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords, language=language)
 
                 #book found, exit for loop
                 if ((books is not None) and len(books)):
@@ -454,16 +517,16 @@ class MAMBook:
             #too constraining?  try just a keywords search with all information
             if ((books is None) or ((books is not None) and (len(books) == 0))):
                 #print (f"Nothing was found so just doing a keyword search {keywords}")
-                books=myx_audible.getAudibleBook (client, keywords=keywords, language=language)
+                books=myx_audible.getAudibleBook (client, cfg, keywords=keywords, language=language)
 
             mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getCleanTitle(), series])
-            if myx_args.params.add_narrators:
+            if add_narrators:
                 mamBook = '|'.join([mamBook, book.getNarrators()])
 
             #process search results
             self.audibleMatches=books
             if (self.audibleMatches is not None):
-                if (myx_args.params.verbose):
+                if (verbose):
                     print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
 
                 bestMatchRate=0
@@ -474,13 +537,13 @@ class MAMBook:
                     #the author is known, check if this book is this authors book
                     #otherwise, if maybe this title is close enough
                     #print (f"{abook.title} by {abook.authors}...")
-                    if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook):
+                    if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook, cfg):
                         audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        if myx_args.params.add_narrators:
+                        if add_narrators:
                             audibleBook = '|'.join([audibleBook, abook.getNarrators()])
-                    elif myx_utilities.isThisMyBookTitle(title, abook, myx_args.params.matchrate): 
+                    elif myx_utilities.isThisMyBookTitle(title, abook, cfg): 
                         audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        if myx_args.params.add_narrators:
+                        if add_narrators:
                             audibleBook = '|'.join([audibleBook, abook.getNarrators()])
                     else:
                         print (f"This book doesn't have a matching title or author, checking the next book...")
@@ -504,7 +567,12 @@ class MAMBook:
         else: 
             return None
         
-    def createHardLinks(self, targetFolder, dryRun=False):
+    def createHardLinks(self, cfg):
+        #Config variables
+        dryRun = bool (cfg.get("Config/flags/dry_run"))
+        verbose = bool (cfg.get("Config/flags/verbose"))
+        no_opf = bool (cfg.get("Config/flags/no_opf"))
+        metadata = cfg.get("Config/metadata")
 
         if (self.metadata == "audible"):
             self.metadataBook=self.bestAudibleMatch
@@ -514,9 +582,6 @@ class MAMBook:
             self.metadataBook=self.ffprobeBook
 
         if (self.metadataBook is not None):
-            if myx_args.params.verbose:
-                print (f"Hardlinking files for {self.metadataBook.title}")
-
             if (dryRun):
                 prefix = "[Dry Run] : "    
             else:
@@ -524,38 +589,43 @@ class MAMBook:
 
             #for each file for this book                
             for f in self.files:
-                #if a book belongs to multiple series, only use the first one                
-                for p in f.getTargetPaths(self.metadataBook):
-                    print (f"{prefix}Hardlinking {f.fullPath} to {p}")
-                    if (not dryRun):
-                        #hardlink the file
-                        p = os.path.join(targetFolder, p)
-                        f.hardlinkFile(f.fullPath, p)                   
+                #UPDATED 8/30 to allow users to customize target_path formats  
+                if metadata == "log":
+                    p = self.paths
+                else:
+                    p = f.getConfigTargetPath(cfg, self.metadataBook)
+
+                print (f"{prefix}Hardlinking files for {self.metadataBook.title}")
+                print (f"\t\t\tfrom {f.fullPath}\n\t\t\t  to {p}")
+
+                if (not dryRun):
+                    #hardlink the file
+                    f.hardlinkFile(f.fullPath, p)                   
 
                     #generate the OPF file
-                    print (f"{prefix}Generating OPF file ...")
-
-                    if ((not dryRun) and (not myx_args.params.no_opf)):
+                    print (f"\tGenerating OPF file ...")
+                    if (not no_opf):
                         self.metadataBook.createOPF(p)
-                
-                if myx_args.params.verbose:
-                    myx_utilities.printDivider()
 
-    def isMatched(self):
+    def matchFound(self):
         return bool(((self.bestMAMMatch is not None) or (self.bestAudibleMatch is not None)))
     
-    def getLogRecord(self, bf):
+    def getLogRecord(self, bf, cfg):
         #MAMBook fields
         book={}
         book["book"]=self.name
         book["file"]=bf.fullPath
-        book["isMatched"]=self.isMatched() 
+        book["sourcePath"]=bf.sourcePath
+        book["mediaPath"]=bf.mediaPath
+        book["isMatched"]=self.isMatched
         book["isHardLinked"]= bf.isHardlinked
         book["mamCount"]=len(self.mamMatches)
         book["audibleMatchCount"]=len(self.audibleMatches)
         book["metadatasource"]=self.metadata
-        #check out the targetpath of the first bookfile
-        book["paths"]=bf.getTargetPaths(self.metadataBook)
+
+        #check out the targetpath of the bookfile
+        if book["metadatasource"] != "as-is":
+            book["paths"]=bf.getConfigTargetPath(cfg, self.metadataBook)
 
         #Get FFProbe Book
         if (bf.ffprobeBook is not None):
@@ -571,76 +641,95 @@ class MAMBook:
 
         return book    
 
-    def getMAMBooks(self, session, bookFile:BookFile, ebooks=False, fixid3=False):
+    def getMAMBooks(self, cfg, bookFile:BookFile):
+        #Config variables
+        verbose = bool(cfg.get("Config/flags/verbose"))
+        add_narrators = bool(cfg.get("Config/flags/add_narrators"))
+        fuzzy_match = cfg.get("Config/fuzzy_match")
+
         #search MAM record for this book
-        # title=" | ".join([f'"{myx_utilities.cleanseTitle(self.name, stripaccents=False, stripUnabridged=False)}"', 
-        #                 f'"{myx_utilities.cleanseTitle(bookFile.ffprobeBook.title, stripaccents=False, stripUnabridged=False)}"',
-        #                 f'"{bookFile.getFileName()}"'])
         title = f'"{bookFile.getFileName()}"'
         authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
         extension = f'"{bookFile.getExtension()}"'
-
-        # REMOVED 8/22 after search API supported my_snatched
-        # if there is no author, we can't just have the filename be the search
-        # if (len(self.ffprobeBook.authors) == 0):
-        #     #use the series as part of the search as well
-        #     if (len(self.ffprobeBook.series)):
-        #         title = " ".join([title, self.ffprobeBook.getSeries()])
-        #     elif (len(self.ffprobeBook.title)):
-        #         title = " ".join([title, self.ffprobeBook.title])
-        
-        #if this is a single or normal file, do a filename search
-        # if (not self.isMultiBookCollection):
-        #     titleFilename = f'"{bookFile.getFileName()}"'
-        #     if (myx_args.params.metadata == "log"):
-        #         #user must have cleaned the id3 tags, use that instead of the book.name
-        #         titleFilename.join(f" {bookFile.ffprobeBook.title}")
-        # else:
-        #     #if this is a multi-file book, use book name and author
-        #     titleFilename=title
     
         # Search using book key and authors (using or search in case the metadata is bad)
         print(f"Searching MAM for\n\tTitleFilename: {title}\n\tauthors:{authors}")
-        self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension, ebooks=ebooks)
+        books=myx_mam.getMAMBook(cfg, titleFilename=title, authors=authors, extension=extension)
+        pprint (books)
 
         # was the author inaccurate? (Maybe it was LastName, FirstName or accented)
         # print (f"Trying again because Filename, Author = {len(self.mamMatches)}")
-        if len(self.mamMatches) == 0:
+        if len(books) == 0:
             #try again, without author this time
             print(f"Widening MAM search using just\n\tTitleFilename: {title}")
-            self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, extension=extension, ebooks=ebooks)
+            books=myx_mam.getMAMBook(cfg, titleFilename=title, extension=extension)
 
-        # # print (f"Trying again because Filename = {len(self.mamMatches)}")
-        # if len(self.mamMatches) == 0:
-        #     #try again, with the parent folder and author
-        #     titleFilename = title 
-        #     print(f"Widening MAM search using\n\tTitle: {title}\n\tAuthors: {authors}")
-        #     self.mamMatches=myx_mam.getMAMBook(session, titleFilename=title, authors=authors, extension=extension)
+        # #find the best match
+        # if (len(self.mamMatches) > 1):
+        #     if (len(self.ffprobeBook.title) == 0) or (fixid3):
+        #         self.ffprobeBook.title = myx_utilities.getAltTitle(self.name, self.ffprobeBook, cfg)
 
-        if myx_args.params.verbose:
-            print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
+        #     self.bestMAMMatch=myx_utilities.findBestMatch(self.ffprobeBook, self.mamMatches, cfg)
+        # else:
+        #     if (len(self.mamMatches)):
+        #         self.bestMAMMatch=self.mamMatches[0]
+
+        #Find the best match
+        self.mamMatches = books
+        book = self.ffprobeBook
+
+        if (self.mamMatches is not None):
+            if (verbose):
+                print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
+
+            bestMatchRate=0
+            #find the best match
+            print(f"Finding the best MAM match out of {len(books)} results")
+            targetBook = '|'.join([self.ffprobeBook.title, self.ffprobeBook.getAuthors(), self.ffprobeBook.getSeriesParts()])
     
-        #find the best match
-        if (len(self.mamMatches) > 1):
-            if (len(self.ffprobeBook.title) == 0) or (fixid3):
-                self.ffprobeBook.title = myx_utilities.getAltTitle(self.name, self.ffprobeBook)
+            for abook in books:
+                #if this book is snatched, include in the match
+                if abook.snatched:
+                    #the author is known, check if this book is this authors book
+                    #otherwise, if maybe this title is close enough
+                    #print (f"{abook.title} by {abook.authors}...")
+                    if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook, cfg):
+                        mamBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        if add_narrators:
+                            mamBook = '|'.join([mamBook, abook.getNarrators()])
+                    elif myx_utilities.isThisMyBookTitle(title, abook, cfg): 
+                        mamBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                        if add_narrators:
+                            mamBook = '|'.join([mamBook, abook.getNarrators()])
+                    else:
+                        print (f"This book doesn't have a matching title or author, checking the next book...")
+                        continue        
 
-            self.bestMAMMatch=myx_utilities.findBestMatch(self.ffprobeBook, self.mamMatches)
-        else:
-            if (len(self.mamMatches)):
-                self.bestMAMMatch=self.mamMatches[0]
+                    #include this book in the comparison
+                    matchRate=myx_utilities.fuzzymatch(targetBook, mamBook)
+                    abook.matchRate=matchRate[fuzzy_match]
 
-        return len(self.mamMatches)
+                    print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetBook}\n\tResult: {mamBook}\n\tBest Match Rate: {bestMatchRate}\n")
+                    
+                    if (matchRate[fuzzy_match] > bestMatchRate):
+                        bestMatchRate=matchRate[fuzzy_match]
+                        self.bestMAMMatch=abook
+
+        #pprint(self.bestMAMMatch)
+        if (books is not None): 
+            return self.bestMAMMatch
+        else: 
+            return None
     
     def getHashKey(self):
         return myx_utilities.getHash(self.name)
 
-    def isCached(self, category):
-        return myx_utilities.isCached(self.getHashKey(),category)
+    def isCached(self, category, cfg):
+        return myx_utilities.isCached(self.getHashKey(),category, cfg)
     
         
-    def cacheMe(self, category, content):
-        return myx_utilities.cacheMe(self.getHashKey(),category, content)
+    def cacheMe(self, category, content, cfg):
+        return myx_utilities.cacheMe(self.getHashKey(),category, content, cfg)
          
         
     def loadFromCache(self, category):

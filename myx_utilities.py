@@ -10,7 +10,6 @@ import json
 import hashlib
 from langcodes import *
 import myx_classes
-import myx_args
 
 ##ffprobe
 def probe_file(filename):
@@ -162,7 +161,7 @@ def createHardLinks(bookFiles, targetFolder="", dryRun=False):
                 print (f"{prefix}Hardlinking {f.sourcePath} to {os.path.join(targetFolder,p)}")
             print("\n", 40 * "-", "\n")
 
-def logBookRecords(logFilePath, bookFiles):
+def logBookRecords(logFilePath, bookFiles, cfg):
 
     write_headers = not os.path.exists(logFilePath)
     with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
@@ -170,9 +169,9 @@ def logBookRecords(logFilePath, bookFiles):
             for f in bookFiles:
                 #get book records to log
                 if (f.isMatched):
-                    row=f.getLogRecord(f.audibleMatch)
+                    row=f.getLogRecord(f.audibleMatch, cfg)
                 else:
-                    row=f.getLogRecord(f.ffprobeBook)
+                    row=f.getLogRecord(f.ffprobeBook, cfg)
                 #get fieldnames
                 row["matches"]=len(f.audibleMatches)
                 fields=row.keys()
@@ -187,16 +186,17 @@ def logBookRecords(logFilePath, bookFiles):
         except csv.Error as e:
             print(f"file {logFilePath}: {e}")
 
-def logBooks(logFilePath, books):
+def logBooks(logFilePath, books, cfg):
     if len(books):
         write_headers = not os.path.exists(logFilePath)
         with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
             try:
                 fields=getLogHeaders()
+                #pprint (fields)
                 for book in books:
                     for file in book.files:
-                        row=book.getLogRecord(file)
-
+                        row=book.getLogRecord(file,cfg)
+                        #pprint(row)
                         #create a writer
                         writer = csv.DictWriter(csv_file, fieldnames=fields)
                         if write_headers:
@@ -207,14 +207,14 @@ def logBooks(logFilePath, books):
             except csv.Error as e:
                 print(f"file {logFilePath}: {e}")
 
-def isCollection (bookFile):
+def isCollection (bookFile, source_path):
     #we assume that most books are formatted this way /Book/Files.m4b
     #we assume that this is a collection, if the file is 3 levels deep, /Book/Another Book or CD/Files.m4b
 
-    relPath = os.path.relpath(bookFile, myx_args.params.source_path).split(os.sep)
+    relPath = os.path.relpath(bookFile, source_path).split(os.sep)
     return (len(relPath) > 2)
 
-def findBestMatch(targetBook, books):
+def findBestMatch(targetBook, books, cfg):
     #set the baseline book
     targetString = '|'.join([targetBook.title, targetBook.getAuthors(), targetBook.getSeriesParts()])
     bestMatchRate=0
@@ -224,17 +224,19 @@ def findBestMatch(targetBook, books):
     for book in books:
         #if this book is in my Snatched, perform the fuzzy match
         if (book.snatched):
-            #create the same string
-            bookString = '|'.join([book.title, book.getAuthors(), book.getSeriesParts()])
-            matchRate=fuzzymatch(targetString, bookString)
-            book.matchRate=matchRate
+            #Is this from the same author
+            if isThisMyAuthorsBook(targetBook.authors, book, cfg):
+                #create the same string
+                bookString = '|'.join([book.title, book.getAuthors(), book.getSeriesParts()])
+                matchRate=fuzzymatch(targetString, bookString)
+                book.matchRate=matchRate
 
-            print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
+                print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
 
-            #is this better?
-            if (matchRate["token_sort"] > bestMatchRate):
-                bestMatchRate=matchRate["token_sort"]
-                bestMatchedBook=book   
+                #is this better?
+                if (matchRate["partial"] > bestMatchRate):
+                    bestMatchRate=matchRate["partial"]
+                    bestMatchedBook=book   
     
     return bestMatchedBook
 
@@ -270,7 +272,7 @@ def readLog(logFilePath, books):
 
 
 def getLogHeaders():
-    headers=['book', 'file', 'isMatched', 'isHardLinked', 'mamCount', 'audibleMatchCount', 'metadatasource', 'paths', 'id3-matchRate', 'id3-asin', 'id3-title', 'id3-subtitle', 'id3-publicationName', 'id3-length', 'id3-duration', 'id3-series', 'id3-authors', 'id3-narrators', 'id3-seriesparts', 'mam-matchRate', 'mam-asin', 'mam-title', 'mam-subtitle', 'mam-publicationName', 'mam-length', 'mam-duration', 'mam-series', 'mam-authors', 'mam-narrators', 'mam-seriesparts', 'adb-matchRate', 'adb-asin', 'adb-title', 'adb-subtitle', 'adb-publicationName', 'adb-length', 'adb-duration', 'adb-series', 'adb-authors', 'adb-narrators', 'adb-seriesparts']
+    headers=['book', 'file', 'paths', 'isMatched', 'isHardLinked', 'mamCount', 'audibleMatchCount', 'metadatasource', 'id3-matchRate', 'id3-asin', 'id3-title', 'id3-subtitle', 'id3-publicationName', 'id3-length', 'id3-duration', 'id3-series', 'id3-authors', 'id3-narrators', 'id3-seriesparts', 'id3-language', 'mam-matchRate', 'mam-asin', 'mam-title', 'mam-subtitle', 'mam-publicationName', 'mam-length', 'mam-duration', 'mam-series', 'mam-authors', 'mam-narrators', 'mam-seriesparts', 'mam-language', 'adb-matchRate', 'adb-asin', 'adb-title', 'adb-subtitle', 'adb-publicationName', 'adb-length', 'adb-duration', 'adb-series', 'adb-authors', 'adb-narrators', 'adb-seriesparts', 'adb-language', 'sourcePath', 'mediaPath']
                     
     return dict.fromkeys(headers)
 
@@ -331,8 +333,11 @@ def createOPF(book, path):
 def getHash(key):
     return hashlib.sha256(key.encode(encoding="utf-8")).hexdigest()
 
-def isCached(key, category):
-    if myx_args.params.verbose:
+def isCached(key, category, cfg):
+    #Config
+    verbose = bool(cfg.get("Config/flags/verbose"))
+
+    if verbose:
         print (f"Checking cache: {category}/{key}...")
     
     #Check if this book's hashkey exists in the cache, if so - it's been processed
@@ -340,13 +345,16 @@ def isCached(key, category):
     found = os.path.exists(bookFile)  
     return found      
     
-def cacheMe(key, category, content):
+def cacheMe(key, category, content, cfg):
+    #Config
+    verbose = bool(cfg.get("Config/flags/verbose"))
+
     #create the cache file
     bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
     with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
         file.write(json.dumps(content))
 
-    if myx_args.params.verbose:
+    if verbose:
         print(f"Caching {key} in File: {bookFile}")
     return os.path.exists(bookFile)        
 
@@ -366,7 +374,10 @@ def isGraphicAudio(author):
     #print (f"Is {author} = 'Graphic Audio LLC.'? {m}")
     return (m is not None)
 
-def isThisMyAuthorsBook (authors, book):
+def isThisMyAuthorsBook (authors, book, cfg):
+    #Config
+    verbose = bool(cfg.get("Config/flags/verbose"))
+
     found=False
     for author in authors:
         if isGraphicAudio(author.name): 
@@ -376,7 +387,7 @@ def isThisMyAuthorsBook (authors, book):
                 if isGraphicAudio(bauthor.name): 
                     continue
                 else:
-                    if myx_args.params.verbose:
+                    if verbose:
                         print (f"Checking if {book.title} is {authors}'s book: {book.authors}")
 
                     #print (f"Author: {author.name} = {bauthor.name}? {(author.name.replace(' ', '') == bauthor.name.replace(' ', ''))}")
@@ -389,7 +400,11 @@ def isThisMyAuthorsBook (authors, book):
 
     return found
 
-def isThisMyBookTitle (title, book, matchrate=0):
+def isThisMyBookTitle (title, book, cfg):
+    #Config
+    matchrate = int(cfg.get("Config/matchrate"))
+    verbose = bool(cfg.get("Config/flags/verbose"))
+
     mytitle = cleanseTitle(title)
     thisTitle = cleanseTitle(book.title)
     thisSeriesTitle = thisTitle
@@ -400,7 +415,7 @@ def isThisMyBookTitle (title, book, matchrate=0):
     
     matchname = fuzzymatch(mytitle, thisTitle)
     matchseriesname = fuzzymatch(mytitle, thisSeriesTitle)
-    if myx_args.params.verbose:
+    if verbose:
         print (f"Checking if {thisTitle} or {thisSeriesTitle} matches my book {mytitle}: {matchname} or {matchseriesname}")
 
     #see if any of the fuzzy match scores are within guidance
@@ -418,7 +433,9 @@ def isThisMyBookTitle (title, book, matchrate=0):
 
     return match
     
-def getAltTitle(parent, book):
+def getAltTitle(parent, book, cfg):
+    verbose = bool(cfg.get("Config/flags/verbose"))
+
     stop = False
     words = []
     skipSeries = False
@@ -435,8 +452,9 @@ def getAltTitle(parent, book):
         #print (f"Getting alternate title for {altTitle}")
 
         #remove extra characters (there really should'nt be : here) 
-        for c in ["-", ".", "part", "track", "of", "(", ")", "_", "[", "]", "m4b", "book", ","]:
-            altTitle = altTitle.replace (c, " ")
+        for c in ["-", ".", "\b(part)\b", "\btrack\b", "\bof\b", "(", ")", "_", "[", "]", "m4b", "\bbook\b", "s,"]:
+            altTitle = re.sub(r"{c}", " ", altTitle, flags=re.IGNORECASE)
+            #altTitle = altTitle.replace (c, " ")
 
         for c in ["'"]:
             altTitle = altTitle.replace (c, "")
@@ -469,7 +487,7 @@ def getAltTitle(parent, book):
             altTitle = ' '.join(words)
             book.title = altTitle
 
-            if myx_args.params.verbose:
+            if verbose:
                 print (f"Found alternative title: {altTitle}")
 
             break
@@ -500,7 +518,7 @@ def isMultiBookCollection(filePath):
     path, file = os.path.split(filePath)    
     #how deep is it from the source?
     filedepth = len(path.split(os.sep)) + 1
-    print (f"File depth of {filePath} is {filedepth}")
+    #print (f"File depth of {filePath} is {filedepth}")
     # if the filedepth from source is 3 levels down, assume it's a multibook collection
     isMBC = (filedepth >= 3)
     return isMBC
