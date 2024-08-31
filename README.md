@@ -58,6 +58,9 @@ options:
 ~~~
 
 ## FAQ
+  **Q:  Where is my config file?**
+  <p>A: You can copy the default_config.cfg into <somefile>.json.  Modify or add the values of paths: [{file, source_path, media_path}]</p>
+
   **Q:  My files are not from MAM, can I still use this tool?**
   <p>A: Use audible as metadata source, i.e., booktree.py audible</p>
 
