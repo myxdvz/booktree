@@ -275,6 +275,8 @@ class BookFile:
         media_path = self.mediaPath
         in_series = cfg.get("Config/target_path/in_series")
         no_series = cfg.get("Config/target_path/no_series")
+        disc_folder = cfg.get("Config/target_path/disc_folder")
+
 
         if (book is not None):
             #Get primary author
@@ -310,7 +312,8 @@ class BookFile:
             tokens["author"] = sanitize_filename(author)
             tokens["series"] = sanitize_filename(series)
             tokens["part"] = sanitize_filename(part)
-            tokens["title"] = sanitize_filename(title)
+            tokens["title"] = sanitize_filename(book.title)
+            tokens["cleanTitle"] = sanitize_filename(title)
             tokens["disc"] = sanitize_filename(disc)
             tokens["narrators"] = f"{{{sanitize_filename(narrators)}}}"
 
@@ -328,7 +331,8 @@ class BookFile:
 
             #add disc for multidisc
             if len(disc):
-                sPath=os.path.join(sPath, sanitize_filename(tokens["title"], tokens["disc"]))
+                z = disc_folder.format (**tokens)
+                sPath=os.path.join(sPath, z)
 
             return os.path.join(media_path, sPath)  
     
