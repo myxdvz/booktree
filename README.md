@@ -66,7 +66,7 @@ options:
   <p>A: Add --fixid3 parameter.</p>
   
 
-## Dependencies
+## Install
 * Python >= 3.10
 * ffmpeg
 * httpx
@@ -75,7 +75,8 @@ options:
 * Requests
 * langcodes
 
-run pip install -r requirements.txt to install dependencies
+1. run pip install -r requirements.txt to install dependencies
+2. copy default_config.cfg into config.json and modify with your paths settings (files, source_path, media_path)
 
 ## Disclaimers
 
