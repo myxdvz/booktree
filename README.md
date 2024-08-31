@@ -13,6 +13,8 @@ It does the following:
 * <media_path>/Author/Title (If there is no series information)
 * <media_path>/Author/Series/Series #Part - Title
 
+The above format is the default. User can modify/tweak this in the config
+
 ## Usage:
 
 ### Recommended Workflow
@@ -28,7 +30,7 @@ It does the following:
       *  The book/torrent has been deleted from MAM since you snatched it
       *  The ID3 metadata is empty or bad, e.g., Author/Narrator that's not comma delimited, bad title and series information
 4.  If everything looks good, rerun booktree without the --dry-run parameter
-5.  Recategorize/Set Location (in you client, e.g., Qbit), to where you have your "processed" files so the script won't have to go thru them again next time
+5.  Recategorize/Set Location (in you client, e.g., Qbit), to where you have your "processed" files to optimize performance. It's ok if you don't, the script will add them to the list of files to be processed, but will skip processing them if they have already been processed before (cache check).
 
   Optionally, you can choose to work on the log file, and feed that as input to booktree in a succeeding run:
 
@@ -37,10 +39,10 @@ It does the following:
     *  id3-asin
     *  id3-title
     *  id3-author
-    *  id3-series
-3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log --file <updatedlogfile.csv> 
+    *  id3-seriesparts
+3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log --file <updatedlogfile.csv>. I recommend having a separate log_config.json file for this 
 
-### Help and Examples
+### Help
 ~~~
 usage: booktree [-h] [--dry-run] config_file
 
