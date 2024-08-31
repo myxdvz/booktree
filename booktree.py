@@ -181,8 +181,7 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
         bf.ffprobe(key)
 
         #at this point, the books is either at the root, or under a book folder
-        if verbose:
-            print (f"Adding {bf.fullPath}\nParent:{bf.getParentFolder()}", end="\r")
+        #print (f"Adding {bf.fullPath}\nParent:{bf.getParentFolder()}", end="\r")
 
         #if the book exists, this must be multi-file book, append the files
         hashKey=myx_utilities.getHash(str(key))
@@ -199,7 +198,7 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
 
         #add books from multi-book collections
         for mbc in multiBookCollections:
-            print (f"NewBook: {mbc.name}  Files: {len(mbc.files)}", end="\r")
+            #print (f"NewBook: {mbc.name}  Files: {len(mbc.files)}", end="\r")
             #for multi-book collection, each file IS a book
             for f in mbc.files:
                 print (f"Adding {f.file} as a new book", end="\r")
@@ -271,8 +270,6 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
                             elif (id3BestMatch is not None) and (mamBestMatch is None):
                                 #Replace bestAudibleMatch with the better matchrate
                                 book[b].bestAudibleMatch = id3BestMatch
-                        else:
-                            book[b].metadata = "id3" 
 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()

@@ -95,11 +95,15 @@ def fuzzymatch(x:str, y:str):
 
     return newZ
     
-def optimizeKeys(keywords, delim=" "):
+def optimizeKeys(cfg, keywords, delim=" "):
+    #Config Variables
+    kw_ignore = cfg.get("Config/tokens/kw_ignore")
+    kw_ignore_words = cfg.get("Config/tokens/kw_ignore_words")
+
     #keywords is a list of stuff, we want to convert it in a comma delimited string
     kw=[]
     for k in keywords:
-        for c in [".", ":", "_", "[", "]", "{", "}", ",", ";", "(", ")"]:
+        for c in kw_ignore: #[".", ":", "_", "[", "]", "{", "}", ",", ";", "(", ")"]:
             k = k.replace(c, " ")
 
         #print(k)
@@ -113,7 +117,7 @@ def optimizeKeys(keywords, delim=" "):
                 if (len(j) > 1):
                     lcj = j.lower()
                     #if not an article, or a word in the ignore list
-                    if lcj not in ["the","and","m4b","mp3","series","audiobook","audiobooks", "book", "part", "track", "novel"]:
+                    if lcj not in kw_ignore_words: #["the","and","m4b","mp3","series","audiobook","audiobooks", "book", "part", "track", "novel"]:
                         #if not CD or DISC XX"
                         if not (re.search ("cd\s?\d+", j, re.IGNORECASE) or  re.search ("disc\s?\d+", j, re.IGNORECASE)):
                             #if not a number
@@ -214,32 +218,6 @@ def isCollection (bookFile, source_path):
     relPath = os.path.relpath(bookFile, source_path).split(os.sep)
     return (len(relPath) > 2)
 
-def findBestMatch(targetBook, books, cfg):
-    #set the baseline book
-    targetString = '|'.join([targetBook.title, targetBook.getAuthors(), targetBook.getSeriesParts()])
-    bestMatchRate=0
-    bestMatchedBook=None
-    #for each matched book, calculate the fuzzymatch rate
-    print(f"Finding the best MAM match out of {len(books)} results")
-    for book in books:
-        #if this book is in my Snatched, perform the fuzzy match
-        if (book.snatched):
-            #Is this from the same author
-            if isThisMyAuthorsBook(targetBook.authors, book, cfg):
-                #create the same string
-                bookString = '|'.join([book.title, book.getAuthors(), book.getSeriesParts()])
-                matchRate=fuzzymatch(targetString, bookString)
-                book.matchRate=matchRate
-
-                print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetString}\n\tResult: {bookString}\n\tBest Match Rate: {bestMatchRate}\n")
-
-                #is this better?
-                if (matchRate["partial"] > bestMatchRate):
-                    bestMatchRate=matchRate["partial"]
-                    bestMatchedBook=book   
-    
-    return bestMatchedBook
-
 def printDivider (char="-", length=40):
     print("\n", length * char, "\n")
     
@@ -256,7 +234,6 @@ def cleanseSeries(series):
 
     return cleanSeries.strip()
 
-
 def readLog(logFilePath, books):
     if os.path.exists(logFilePath):
         with open(logFilePath, newline="", errors='ignore', encoding='utf-8',) as csv_file:
@@ -269,7 +246,6 @@ def readLog(logFilePath, books):
 
             except csv.Error as e:
                 print(f"file {logFilePath}: {e}")
-
 
 def getLogHeaders():
     headers=['book', 'file', 'paths', 'isMatched', 'isHardLinked', 'mamCount', 'audibleMatchCount', 'metadatasource', 'id3-matchRate', 'id3-asin', 'id3-title', 'id3-subtitle', 'id3-publicationName', 'id3-length', 'id3-duration', 'id3-series', 'id3-authors', 'id3-narrators', 'id3-seriesparts', 'id3-language', 'mam-matchRate', 'mam-asin', 'mam-title', 'mam-subtitle', 'mam-publicationName', 'mam-length', 'mam-duration', 'mam-series', 'mam-authors', 'mam-narrators', 'mam-seriesparts', 'mam-language', 'adb-matchRate', 'adb-asin', 'adb-title', 'adb-subtitle', 'adb-publicationName', 'adb-length', 'adb-duration', 'adb-series', 'adb-authors', 'adb-narrators', 'adb-seriesparts', 'adb-language', 'sourcePath', 'mediaPath']
@@ -434,12 +410,14 @@ def isThisMyBookTitle (title, book, cfg):
     return match
     
 def getAltTitle(parent, book, cfg):
+    #Config
     verbose = bool(cfg.get("Config/flags/verbose"))
+    patterns = cfg.get ("Config/tokens/title_patterns")
+    skipSeries = bool (cfg.get ("Config/tokens/skip_series"))
 
     stop = False
     words = []
-    skipSeries = False
-
+    
     #start with title
     altTitle = cleanseTitle(book.title).lower()
 
@@ -452,7 +430,7 @@ def getAltTitle(parent, book, cfg):
         #print (f"Getting alternate title for {altTitle}")
 
         #remove extra characters (there really should'nt be : here) 
-        for c in ["-", ".", "\b(part)\b", "\btrack\b", "\bof\b", "(", ")", "_", "[", "]", "m4b", "\bbook\b", "s,"]:
+        for c in patterns:  #["-", ".", "\b(part)\b", "\btrack\b", "\bof\b", "(", ")", "_", "[", "]", "m4b", "\bbook\b", "s,"]:
             altTitle = re.sub(r"{c}", " ", altTitle, flags=re.IGNORECASE)
             #altTitle = altTitle.replace (c, " ")
 

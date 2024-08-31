@@ -73,7 +73,7 @@ class Config(object):
             with open(default_path) as def_cf_file:
                 default_cfg = json.loads (def_cf_file.read())
                 
-        merge_dictionaries_recursively(default_cfg, cfg)
+            merge_dictionaries_recursively(default_cfg, cfg)
 
         #override dryRun with command line param
         if dryRun is not None:

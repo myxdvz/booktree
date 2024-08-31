@@ -429,7 +429,8 @@ class MAMBook:
         try:
             metadata=myx_utilities.probe_file(file)["format"]["tags"]
         except Exception as e:
-            print (f"ffprobe failed on {self.name}: {e}")
+            #ignore errors
+            print (f"\nffprobe failed on {self.name}: {e}")
 
         if (metadata is not None):
             #parse and create a book object
@@ -448,7 +449,6 @@ class MAMBook:
             if 'artist' in metadata: 
                 #remove everything in parentheses firstm before parsing
                 artist = re.sub("\([.+]\)", "", metadata["artist"], flags=re.IGNORECASE)
-                print (f"id3-artist: {metadata['artist']}\nArtist: {artist}")
                 for author in re.split(",", artist):
                     book.authors.append(Contributor(myx_utilities.removeGA(author)))
             #parse narrators
@@ -487,7 +487,7 @@ class MAMBook:
             elif len(book.series):
                 series = myx_utilities.cleanseTitle(book.series[0].name, stripUnabridged=True)
             
-            keywords=myx_utilities.optimizeKeys([myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+            keywords=myx_utilities.optimizeKeys(cfg, [myx_utilities.cleanseTitle(title, stripUnabridged=True), 
                                                 series,
                                                 myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" ")), 
                                                 myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" "))])
@@ -655,7 +655,7 @@ class MAMBook:
         # Search using book key and authors (using or search in case the metadata is bad)
         print(f"Searching MAM for\n\tTitleFilename: {title}\n\tauthors:{authors}")
         books=myx_mam.getMAMBook(cfg, titleFilename=title, authors=authors, extension=extension)
-        pprint (books)
+        #pprint (books)
 
         # was the author inaccurate? (Maybe it was LastName, FirstName or accented)
         # print (f"Trying again because Filename, Author = {len(self.mamMatches)}")
