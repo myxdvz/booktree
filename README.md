@@ -30,89 +30,29 @@ It does the following:
 4.  If everything looks good, rerun booktree without the --dry-run parameter
 5.  Recategorize/Set Location (in you client, e.g., Qbit), to where you have your "processed" files so the script won't have to go thru them again next time
 
-  Optionally, you can choose to work on the log file (removing all the rows that matched and already processed), and feed that as input to booktree in a succeeding run:
+  Optionally, you can choose to work on the log file, and feed that as input to booktree in a succeeding run:
 
-1. Fix the ID3 metadata in the log file (easier to do that in the log file as you can't touch the file). The areas to focus on are:
+1. Fix the <mark>paths</mark> column to edit/change the generated target path.  When isMatched=TRUE, booktree will just use the paths value as-is
+2. If isMatched = FALSE, you can fix the id3-metadata to re-do the search.  The areas to focus on are:
     *  id3-asin
     *  id3-title
     *  id3-author
     *  id3-series
-2. Fixing those four fields will increase your match rate
-3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log --inputFile <updatedlogfile.csv> [the rest of the args]
-
-  If there really is no match (metadata=id3), and you still want to organize the book from the updated id3 information, update the metadasource column to "as-is" and it will take the data from the log and not query MAM or Audible
+3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log --file <updatedlogfile.csv> 
 
 ### Help and Examples
 ~~~
-usage: booktree [-h] [--file FILE] [--source_path SOURCE_PATH] --media_path MEDIA_PATH [--log_path LOG_PATH] [--session SESSION]
-                [--matchrate MATCHRATE] [--dry-run] [--verbose] [--no-opf] [--no-cache] [--multibook] [--fixid3]
-                {audible,mam,mam-audible,log}
+usage: booktree [-h] [--dry-run] config_file
 
-Reorganize your audiobooks using ID3 or Audbile metadata. The originals are untouched and will be hardlinked to their destination
+Reorganize your audiobooks using ID3 or Audbile metadata. The originals are untouched and will be hardlinked to their
+destination
 
 positional arguments:
-  {audible,mam,mam-audible,log}
-                        Source of the metada: (audible, mam, mam-audible)
+  config_file           Your Config File
 
 options:
-  -h, --help                  show this help message and exit
-  --file FILE                 The file or files(s) you want to process. Accepts * and ?. Defaults to *.m4b
-  --source_path SOURCE_PATH
-                              Where your unorganized files are
-  --media_path MEDIA_PATH
-                              Where your organized files will be, i.e. your Audiobookshelf library
-  --log_path LOG_PATH         Where your log files will be
-  --session SESSION           Your session cookie (if using mam or mam-audible)
-  --matchrate MATCHRATE
-                              Minimum acceptable fuzzy match rate. Defaults to 60
-  --dry-run                   If provided, will only create log and not actually build the tree
-  --verbose                   If provided, will print additional info
-  --no-opf                    If provided, skips OPF file
-  --no-cache                  If provided, skips caching
-  --multibook                 If provided, assume this is a multibook collection, bypass the check
-  --fixid3                    If provided, will attempt to fix id3 metadata
-~~~
-
-### Examples and Use Cases
-
-#### Use Case #1: Minimum usage required - Process all m4b files under current folder to /data/media/abs.
-~~~
-python booktree.py --media_path /data/media/abs [--dry-run]
-~~~
-
-#### Use Case #2a: One Book in a folder - Process all m4b files from /downloads/01 The Lies of Locke Lamora to /data/media/abs.
-~~~
-python booktree.py --source_path "/downloads/01 The Lies of Locke Lamora" --media_path /data/media/abs [--dry-run]
-~~~
-
-#### Use Case #2b: One Book in a folder - Process all m4b files from a folder 01 The Lies of Locke Lamora somewhere under /downloads to /data/media/abs.
-~~~
-python booktree.py --file "**/01 The Lies of Locke Lamora/*.m4b" --source_path "/downloads" --media_path /data/media/abs [--dry-run]
-~~~
-
-#### Use Case #3a: One Book in a file (that is under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" somewhere under /downloads to "/data/media/abs"
-~~~
-python booktree.py --file "**/KATE.DANIELS.04.Magic Bleeds.m4b" --source_path /downloads --media_path /data/media/abs [--dry-run]
-~~~
-
-#### Use Case #3b: One Book in a file (that is NOT under a book folder) - Process a single file, named "**/KATE.DANIELS.04.Magic Bleeds.m4b" /downloads/Matchup to "/data/media/abs" For this use case, it is IMPORTANT that the --source_path be the parent folder of the file
-~~~
-python booktree.py --file "MatchUp.m4b" --source_path /downloads/MatchUp --media_path /data/media/abs [--dry-run]
-~~~
-
-#### Use Case #4: All audiobooks under a folder - Recursively process all m4b files from /downloads to /data/media/abs.
-~~~
-python booktree.py --source_path /downloads --media_path /data/media/abs [--dry-run]
-~~~
-
-#### Use Case #5: Reprocess the logfile named inputFile.csv and rename/hardlink files from /downloads to /data/media/abs
-~~~
-python booktree.py log --file inputFile.csv --source_path /downloads --media_path /data/media/abs [--dry-run]
-~~~
-
-#### Use Case #6: Process files from /downloads to /data/media/abs, use audible only, not MAM
-~~~
-python booktree.py audible --source_path /downloads --media_path /data/media/abs [--dry-run]
+  -h, --help            show this help message and exit
+  --dry-run             If provided, will override dryRun in config
 ~~~
 
 ## FAQ
@@ -125,18 +65,15 @@ python booktree.py audible --source_path /downloads --media_path /data/media/abs
   **Q:  My metadata is not producing any match, what can I do?**
   <p>A: Add --fixid3 parameter.</p>
   
-        This flag supports parsing some known/common id3 patterns:
-        
-        * (Author) (-) (Series) (Title) (Year) (Extra/Chapters) 
-        * (Title) (Series), (Part/Extra)
-        * (Series) - (Title) - (Part/Extra)
-
 
 ## Dependencies
 * Python >= 3.10
 * ffmpeg
 * httpx
 * thefuzz 
+* pathvalidate
+* Requests
+* langcodes
 
 run pip install -r requirements.txt to install dependencies
 
@@ -144,8 +81,8 @@ run pip install -r requirements.txt to install dependencies
 
 * While I have tested this on over 30K files and over 4K audiobooks, I have NOT tested this on Windows, some of the / should probably be \
 * It should work seamlessly on recent MAM books : single file or multi-file book under a single book folder
-* The script may not immediately work on older, Multibook collections immediately -- I suggest editing the log and update the book and id-3 title columns and rerun in log mode
-* The script may not immediately work on Multi-CD books -- I suggest editing the log and update the book and id-3 title columns and rerun in log mode
+* The script may not immediately work on older, multibook collections >> set multibook = true
+* The script may not immediately work on Multi-CD books
 * Hard linking will only work if the source and target paths are on the same volume
 
 
