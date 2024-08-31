@@ -338,52 +338,6 @@ class BookFile:
     
     def getTargetPaths(self, book, cfg):
         return self.getConfigTargetPath(cfg, book)
-        # #Config
-        # add_narrators = bool (cfg.get("Config/flags/add_narrators"))
-
-        # paths=[]
-        # if (book is not None):
-        #     #Get primary author
-        #     if ((book.authors is not None) and (len(book.authors) == 0)):
-        #         author="Unknown"
-        #     else:
-        #         author=book.authors[0].name  
-
-        #     #standardize author name (replace . with space, and then make sure that there's only single space)
-        #     stdAuthor=sanitize_filename(myx_utilities.cleanseAuthor(author))
-
-        #     #is this a MultiCd file?
-        #     disc = self.getParentFolder()
-        #     #print (f"File: {self.file}\nParent: {disc}")
-
-        #     if (not myx_utilities.isMultiCD(disc)):
-        #         disc = ""
-
-        #     #Does this book belong in a series - only take the first series?
-        #     sPath=""
-        #     if (len(book.series) > 0):
-        #         #Set separator
-        #         #add narrator in path
-        #         if (add_narrators) and (len(book.narrators)):
-        #             series = f"{myx_utilities.cleanseSeries(book.series[0].name)} {{{book.getNarrators()}}}"
-        #         else:
-        #             series = f"{myx_utilities.cleanseSeries(book.series[0].name)}"
-
-        #         sPath=os.path.join(stdAuthor, sanitize_filename(series), 
-        #                                 sanitize_filename(f"{myx_utilities.cleanseSeries(book.series[0].getSeriesPart())} - {myx_utilities.cleanseTitle(book.title)}"),
-        #                                 sanitize_filename(disc))
-        #     else:
-        #         #add narrator in path
-        #         if (add_narrators) and (len(book.narrators)):
-        #             title = f"{myx_utilities.cleanseTitle(book.title)} {{{book.getNarrators()}}}"
-        #         else:
-        #             title = f"{myx_utilities.cleanseTitle(book.title)}"
-
-        #         sPath=os.path.join(stdAuthor, sanitize_filename(title, disc))
-
-        #     paths.append(sPath)
-
-        #     return paths  
     
     def getLogRecord(self, bookMatch:Book, cfg):
         #returns a dictionary of the record that gets logged
@@ -668,16 +622,6 @@ class MAMBook:
             print(f"Widening MAM search using just\n\tTitleFilename: {title}")
             books=myx_mam.getMAMBook(cfg, titleFilename=title, extension=extension)
 
-        # #find the best match
-        # if (len(self.mamMatches) > 1):
-        #     if (len(self.ffprobeBook.title) == 0) or (fixid3):
-        #         self.ffprobeBook.title = myx_utilities.getAltTitle(self.name, self.ffprobeBook, cfg)
-
-        #     self.bestMAMMatch=myx_utilities.findBestMatch(self.ffprobeBook, self.mamMatches, cfg)
-        # else:
-        #     if (len(self.mamMatches)):
-        #         self.bestMAMMatch=self.mamMatches[0]
-
         #Find the best match
         self.mamMatches = books
         book = self.ffprobeBook
@@ -730,11 +674,9 @@ class MAMBook:
 
     def isCached(self, category, cfg):
         return myx_utilities.isCached(self.getHashKey(),category, cfg)
-    
         
     def cacheMe(self, category, content, cfg):
-        return myx_utilities.cacheMe(self.getHashKey(),category, content, cfg)
-         
+        return myx_utilities.cacheMe(self.getHashKey(),category, content, cfg) 
         
     def loadFromCache(self, category):
         return myx_utilities.loadFromCache(self.getHashKey(), category)
