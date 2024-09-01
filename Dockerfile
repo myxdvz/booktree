@@ -1,5 +1,6 @@
 FROM alpine:latest
 
+COPY init.sh /
 RUN echo "**** installing system packages ****" \
     && apk update \
     && apk add --update --no-cache python3 py3-pip \
@@ -13,7 +14,8 @@ RUN echo "**** installing system packages ****" \
     && chmod +x /booktree \
     && unzip /booktree \
     && pip install --upgrade pip \
-    && pip install --no-cache-dir --requirement /booktree-main/requirements.txt \
+    && pip install --no-cache-dir --break-system-packages --requirement /booktree-main/requirements.txt \
+    && chmod +x /init.sh \
     && rm -rf booktree \
     && mv booktree-main booktree
 
@@ -22,4 +24,4 @@ VOLUME /config
 VOLUME /logs
 VOLUME /data
 
-COPY default_config.cfg /config/config.json
+COPY default_config.cfg /config/default_config.json
