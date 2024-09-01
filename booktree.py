@@ -270,6 +270,11 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
                             elif (id3BestMatch is not None) and (mamBestMatch is None):
                                 #Replace bestAudibleMatch with the better matchrate
                                 book[b].bestAudibleMatch = id3BestMatch
+                    else:
+                        #this is multibook so audible only
+                        if id3BestMatch is not None:
+                            book[b].metadata = "audible" 
+
 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()

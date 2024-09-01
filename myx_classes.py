@@ -424,10 +424,11 @@ class MAMBook:
 
     def getAudibleBooks(self, client, book, cfg):
         #Config variables
-        matchrate = int(cfg.get("Config/matchrate"))
+        minMatchRate = int(cfg.get("Config/matchrate"))
         fixid3 = bool(cfg.get("Config/flags/fixid3"))
         verbose = bool(cfg.get("Config/flags/verbose"))
         add_narrators = bool(cfg.get("Config/flags/add_narrators"))
+        fuzzy_match = cfg.get("Config/fuzzy_match")
 
         books=[]
         if (book is not None):
@@ -509,12 +510,12 @@ class MAMBook:
 
                     #include this book in the comparison
                     matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
-                    abook.matchRate=matchRate["token_sort"]
+                    abook.matchRate=matchRate[fuzzy_match]
 
                     print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}\n")
                     
-                    if (matchRate["token_sort"] > bestMatchRate):
-                        bestMatchRate=matchRate["token_sort"]
+                    if (matchRate[fuzzy_match] > bestMatchRate) and (matchRate[fuzzy_match] >= minMatchRate):
+                        bestMatchRate=matchRate[fuzzy_match]
                         self.bestAudibleMatch=abook
         #end if
 

@@ -426,49 +426,48 @@ def getAltTitle(parent, book, cfg):
         altTitle = cleanseTitle(book.series[0].name)
         if len(altTitle) : skipSeries = True
 
+    print (f"Proxwaaing {altTitle}")
     while True:
-        #print (f"Getting alternate title for {altTitle}")
-
-        #remove extra characters (there really should'nt be : here) 
-        for c in patterns:  #["-", ".", "\b(part)\b", "\btrack\b", "\bof\b", "(", ")", "_", "[", "]", "m4b", "\bbook\b", "s,"]:
-            altTitle = re.sub(r"{c}", " ", altTitle, flags=re.IGNORECASE)
-            #altTitle = altTitle.replace (c, " ")
-
-        for c in ["'"]:
-            altTitle = altTitle.replace (c, "")
-        #print (f"remove symbols >> {altTitle}")
-
         #remove authors name in title
         for a in book.authors:
             altTitle = re.sub(f"{a.name}", " ", altTitle, flags=re.IGNORECASE)
-
-        #print (f"remove {book.authors} >> {altTitle}")
+            #print (f"remove {book.authors} >> {altTitle}")
 
         #remove series name in title
         if (not skipSeries):
             for s in book.series:
                 altTitle = re.sub(f"{s.name}", " ", altTitle, flags=re.IGNORECASE)
-
             #print (f"remove {book.series} >> {altTitle}")
 
-        #split in spaces, remove the numbers
+        #remove the numbers
         altTitle = re.sub(r"\b\d*\b", "", altTitle, flags=re.IGNORECASE)
         #print (f"remove digits >> {altTitle}")
+
+        #remove extra characters (there really should'nt be : here) 
+        for c in patterns:
+            #c = str.replace (c, "\\", "\")
+            regx =re.compile(c, re.IGNORECASE)
+            #print (f"{regx} = {altTitle}")
+            altTitle = regx.sub(" ", altTitle)
+            #altTitle = altTitle.replace (c, " ")
+
+        for c in ["'", "-"]:
+            altTitle = altTitle.replace (c, "")
+            #print (f"remove symbols >> {altTitle}")
 
         for w in altTitle.split():
             if w not in words:
                 words.append(w)
 
         #print (f"remove spaces >> {' '.join(words)}")
-
         if (len(words)) or (stop):
             altTitle = ' '.join(words)
             book.title = altTitle
 
             if verbose:
                 print (f"Found alternative title: {altTitle}")
-
             break
+
         else:
             altTitle = cleanseTitle(parent).lower()
             stop = True
