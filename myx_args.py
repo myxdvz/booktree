@@ -10,8 +10,16 @@ def importArgs():
     appDescription = """Reorganize your audiobooks using ID3 or Audbile metadata.\nThe originals are untouched and will be hardlinked to their destination"""
     parser = argparse.ArgumentParser(prog="booktree", description=appDescription)
     parser.add_argument ("config_file", help="Your Config File")
-    parser.add_argument ("-dc","--default_config_file", help="Default Config File")
+    #Debug flags
     parser.add_argument ("--dry-run", default=None, action="store_true", help="If provided, will override dryRun in config")
+    parser.add_argument("--verbose", default=None, action="store_true", help="If provided, will print additional info")
+    #Advanced flags
+    parser.add_argument("--no-opf", default=None, action="store_true", help="If provided, skips OPF file")
+    parser.add_argument("--no-cache", default=None, action="store_true", help="If provided, processes books that have been processed/cached before")
+    parser.add_argument("--multibook", default=None, action="store_true", help="If provided, will process books at file level")
+    parser.add_argument("--fixid3", default=None, action="store_true", help="If provided, will attempt to fix id3 metadata")
+    parser.add_argument("--ebooks", default=None, action="store_true", help="If provided, will look for ebooks and skip audible")
+    parser.add_argument("--add-narrators", default=None, action="store_true", help="If provided,include the narrators in the path")
 
     # #you want a specific file or pattern
     # parser.add_argument("--file", default="", help="The file or files(s) you want to process.  Accepts * and ?. Defaults to *.m4b/*.mp3")
@@ -28,13 +36,6 @@ def importArgs():
     # #debug flags
     # parser.add_argument("--dry-run", default=False, action="store_true", help="If provided, will only create log and not actually build the tree")
     # parser.add_argument("--verbose", default=False, action="store_true", help="If provided, will print additional info")
-    # #Advanced flags
-    # parser.add_argument("--no-opf", default=False, action="store_true", help="If provided, skips OPF file")
-    # parser.add_argument("--no-cache", default=False, action="store_true", help="If provided, processes books that have been processed/cached before")
-    # parser.add_argument("--multibook", default=False, action="store_true", help="If provided, will process books at file level")
-    # parser.add_argument("--fixid3", default=False, action="store_true", help="If provided, will attempt to fix id3 metadata")
-    # parser.add_argument("--ebooks", default=False, action="store_true", help="If provided, will look for ebooks and skip audible")
-    # parser.add_argument("--add-narrators", default=False, action="store_true", help="If provided,include the narrators in the path")
 
     #get all arguments
     args = parser.parse_args()
@@ -65,21 +66,39 @@ class Config(object):
     """ Simple dict wrapper that adds a thin API allowing for slash-based retrieval of
         nested elements, e.g. cfg.get_config("meta/dataset_name")
     """
-    def __init__(self, config_path, default_path=None, dryRun=None):
-        with open(config_path) as cf_file:
-            cfg = json.loads (cf_file.read())
+    def __init__(self, params):
+        try:
+            with open(params.config_file) as cf_file:
+                cfg = json.loads (cf_file.read())
 
-        if default_path is not None:
-            with open(default_path) as def_cf_file:
-                default_cfg = json.loads (def_cf_file.read())
-                
-            merge_dictionaries_recursively(default_cfg, cfg)
+                #override config/flags with command line param
+                if params.dry_run is not None:
+                    cfg["Config"]["flags"]["dry_run"] = bool(params.dry_run)            
 
-        #override dryRun with command line param
-        if dryRun is not None:
-            cfg["Config"]["flags"]["dry_run"] = bool(dryRun)
+                if params.verbose is not None:
+                    cfg["Config"]["flags"]["verbose"] = bool(params.verbose)            
 
-        self._data = cfg            
+                if params.no_cache is not None:
+                    cfg["Config"]["flags"]["no_cache"] = bool(params.no_cache)            
+
+                if params.no_opf is not None:
+                    cfg["Config"]["flags"]["no_opf"] = bool(params.no_opf)            
+
+                if params.multibook is not None:
+                    cfg["Config"]["flags"]["multibook"] = bool(params.multibook)            
+
+                if params.ebooks is not None:
+                    cfg["Config"]["flags"]["ebooks"] = bool(params.ebooks)            
+
+                if params.fixid3 is not None:
+                    cfg["Config"]["flags"]["fixid3"] = bool(params.fixid3)            
+
+                if params.add_narrators is not None:
+                    cfg["Config"]["flags"]["add_narrators"] = bool(params.add_narrators)   
+
+            self._data = cfg            
+        except Exception as e:
+            print (f"\nThere was a problem reading your config file {params.config_file}: {e}\n")
 
     def get(self, path=None, default=None):
         # we need to deep-copy self._data to avoid over-writing its data

@@ -350,8 +350,15 @@ if __name__ == "__main__":
         #process commandline arguments
         myx_args.params = myx_args.importArgs()
 
-        #import config
-        cfg = myx_args.Config(myx_args.params.config_file, myx_args.params.default_config_file, myx_args.params.dry_run)
+        #check if config files are present
+        if ((myx_args.params.config_file is not None) and os.path.exists(myx_args.params.config_file)):
+            
+            #import config
+            cfg = myx_args.Config(myx_args.params)
+         
+
+        else:
+            print(f"\nYour config path is invalid. Please check and try again!\n\tConfig file path:{myx_args.params.config_file}\n")
 
         #start the program
         main(cfg)
