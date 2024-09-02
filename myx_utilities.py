@@ -119,9 +119,9 @@ def optimizeKeys(cfg, keywords, delim=" "):
                     #if not an article, or a word in the ignore list
                     if lcj not in kw_ignore_words: #["the","and","m4b","mp3","series","audiobook","audiobooks", "book", "part", "track", "novel"]:
                         #if not CD or DISC XX"
-                        if not (re.search ("cd\s?\d+", j, re.IGNORECASE) or  re.search ("disc\s?\d+", j, re.IGNORECASE)):
+                        if not (re.search (r"cd\s?\d+", j, re.IGNORECASE) or  re.search (r"disc\s?\d+", j, re.IGNORECASE)):
                             #if not a number
-                            if not (re.search ("\d+", j, re.IGNORECASE)):
+                            if not (re.search (r"\d+", j, re.IGNORECASE)):
                                 #if it's not already in the list
                                 if lcj not in kw:
                                     kw.append(j.lower())
@@ -343,10 +343,10 @@ def loadFromCache(key, category):
     return json.loads(f)
     
 def isMultiCD(parent):
-    return re.search("disc\s?\d+", parent.lower()) or re.search("cd\s?\d+", parent.lower())
+    return re.search(r"disc\s?\d+", parent.lower()) or re.search(r"cd\s?\d+", parent.lower())
 
 def isGraphicAudio(author):
-    m = re.search("graphic[\s]?audio[\s]?(llc[.]?)*", author.lower())
+    m = re.search(r"graphic[\s]?audio[\s]?(llc[.]?)*", author.lower())
     #print (f"Is {author} = 'Graphic Audio LLC.'? {m}")
     return (m is not None)
 

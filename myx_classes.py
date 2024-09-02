@@ -406,12 +406,12 @@ class MAMBook:
             #parse authors
             if 'artist' in metadata: 
                 #remove everything in parentheses firstm before parsing
-                artist = re.sub("\([.+]\)", "", metadata["artist"], flags=re.IGNORECASE)
+                artist = metadata["artist"]
                 for author in re.split(",", artist):
                     book.authors.append(Contributor(myx_utilities.removeGA(author)))
             #parse narrators
             if 'composer' in metadata: 
-                composer = re.sub("\([.+]\)", "", metadata["composer"], flags=re.IGNORECASE)
+                composer = metadata["composer"]
                 for narrator in re.split(",", composer):
                     #remove any occurrence of (Narrator)
                     narrator = re.sub("\([.]+\)", "", narrator, flags=re.IGNORECASE)       
