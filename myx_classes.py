@@ -408,13 +408,15 @@ class MAMBook:
                 #remove everything in parentheses firstm before parsing
                 artist = metadata["artist"]
                 for author in re.split(",", artist):
-                    book.authors.append(Contributor(myx_utilities.removeGA(author)))
+                    author = re.sub(r"\([.]+\)", "", author, flags=re.IGNORECASE)  
+                    author = myx_utilities.removeGA(author)
+                    if len(author): book.authors.append(Contributor())
             #parse narrators
             if 'composer' in metadata: 
                 composer = metadata["composer"]
                 for narrator in re.split(",", composer):
                     #remove any occurrence of (Narrator)
-                    narrator = re.sub("\([.]+\)", "", narrator, flags=re.IGNORECASE)       
+                    narrator = re.sub(r"\([.]+\)", "", narrator, flags=re.IGNORECASE)       
                     book.narrators.append(Contributor(narrator))
         
         #return a book object created from  ffprobe
