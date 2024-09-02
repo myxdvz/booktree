@@ -352,16 +352,19 @@ if __name__ == "__main__":
 
         #check if config files are present
         if ((myx_args.params.config_file is not None) and os.path.exists(myx_args.params.config_file)):
+            try:
+                #import config
+                cfg = myx_args.Config(myx_args.params)
             
-            #import config
-            cfg = myx_args.Config(myx_args.params)
-         
-
+                #start the program
+                main(cfg)
+            except Exception as e:
+                print(f"\nThere was a problem reading your config file {myx_args.params.config_file}: {e}\n")
+                
         else:
             print(f"\nYour config path is invalid. Please check and try again!\n\tConfig file path:{myx_args.params.config_file}\n")
 
-        #start the program
-        main(cfg)
+
 
 
 

@@ -98,7 +98,7 @@ class Config(object):
 
             self._data = cfg            
         except Exception as e:
-            print (f"\nThere was a problem reading your config file {params.config_file}: {e}\n")
+            raise Exception(e)
 
     def get(self, path=None, default=None):
         # we need to deep-copy self._data to avoid over-writing its data
