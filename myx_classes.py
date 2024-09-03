@@ -449,16 +449,22 @@ class MAMBook:
             elif len(book.series):
                 series = myx_utilities.cleanseTitle(book.series[0].name, stripUnabridged=True)
             
-            keywords=myx_utilities.optimizeKeys(cfg, [myx_utilities.cleanseTitle(title, stripUnabridged=True), 
-                                                series,
-                                                myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" ")), 
-                                                myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" "))])
+            if add_narrators:
+                keywords=myx_utilities.optimizeKeys(cfg, [myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+                                                    series,
+                                                    myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" ")), 
+                                                    myx_utilities.cleanseAuthor(book.getNarrators(delimiter=" "))])
+            else:
+                keywords=myx_utilities.optimizeKeys(cfg, [myx_utilities.cleanseTitle(title, stripUnabridged=True), 
+                                                    series,
+                                                    myx_utilities.cleanseAuthor(book.getAuthors(delimiter=" "))])
+
             #print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
             
             #generate author, narrator combo
             author_narrator=[]
             for i in range(len(book.authors)):
-                if len(book.narrators):
+                if add_narrators and len(book.narrators):
                     for j in range(len(book.narrators)):
                         author_narrator.append((book.authors[i].name, book.narrators[j].name))
                 else:
