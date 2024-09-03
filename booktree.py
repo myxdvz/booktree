@@ -355,11 +355,12 @@ if __name__ == "__main__":
             try:
                 #import config
                 cfg = myx_args.Config(myx_args.params)
-            
-                #start the program
-                main(cfg)
+
             except Exception as e:
-                print(f"\nThere was a problem reading your config file {myx_args.params.config_file}: {e}\n")
+                raise Exception(f"\nThere was a problem reading your config file {myx_args.params.config_file}: {e}\n")
+            
+            #start the program
+            main(cfg)
 
         else:
             print(f"\nYour config path is invalid. Please check and try again!\n\tConfig file path:{myx_args.params.config_file}\n")

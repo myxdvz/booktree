@@ -253,56 +253,58 @@ def getLogHeaders():
     return dict.fromkeys(headers)
 
 def createOPF(book, path):
-    # --- Generate .opf Metadata file ---
-    opfTemplate=os.path.join(os.getcwd(), "templates/booktemplate.opf") 
-    with open(opfTemplate, mode='r') as file:
-        template = file.read()
+    try:
+        # --- Generate .opf Metadata file ---
+        opfTemplate=os.path.join(os.getcwd(), "templates/booktemplate.opf") 
+        with open(opfTemplate, mode='r') as file:
+            template = file.read()
 
-    # - Author -
-    authors=""
-    for author in book.authors:
-        authors += f"\t<dc:creator opf:role='aut'>{author.name}</dc:creator>\n"
-    template = re.sub(r"__AUTHORS__", authors, template)
+        # - Author -
+        authors=""
+        for author in book.authors:
+            authors += f"\t<dc:creator opf:role='aut'>{author.name}</dc:creator>\n"
+        template = re.sub(r"__AUTHORS__", authors, template)
 
-    # - Title -
-    template = re.sub(r"__TITLE__", book.title, template)
+        # - Title -
+        template = re.sub(r"__TITLE__", book.title, template)
 
-    # - Subtitle -
-    template = re.sub(r"__SUBTITLE__", book.subtitle, template)
+        # - Subtitle -
+        template = re.sub(r"__SUBTITLE__", book.subtitle, template)
 
-    # - Description -
-    template = re.sub(r"__DESCRIPTION__", book.description, template)
+        # - Description -
+        template = re.sub(r"__DESCRIPTION__", book.description, template)
 
-    # - Narrator -
-    narrators=""
-    for narrator in book.narrators:
-        narrators += f"\t<dc:creator opf:role='nrt'>{narrator.name}</dc:creator>\n"
-    template = re.sub(r"__NARRATORS__", narrators, template)
+        # - Narrator -
+        narrators=""
+        for narrator in book.narrators:
+            narrators += f"\t<dc:creator opf:role='nrt'>{narrator.name}</dc:creator>\n"
+        template = re.sub(r"__NARRATORS__", narrators, template)
 
-    # - ASIN -
-    template = re.sub(r"__ASIN__", book.asin, template)
+        # - ASIN -
+        template = re.sub(r"__ASIN__", book.asin, template)
 
-    # - Series -
-    series=""
-    for s in book.series:
-        series += f"\t<ns0:meta name='calibre:series' content='{s.name}' />\n"
-        series += f"\t<ns0:meta name='calibre:series_index' content='{s.part}' />\n"
-    template = re.sub(r"__SERIES__", series, template)
+        # - Series -
+        series=""
+        for s in book.series:
+            series += f"\t<ns0:meta name='calibre:series' content='{s.name}' />\n"
+            series += f"\t<ns0:meta name='calibre:series_index' content='{s.part}' />\n"
+        template = re.sub(r"__SERIES__", series, template)
 
-    # - Language -
-    template = re.sub(r"__LANGUAGE__", book.language, template)
+        # - Language -
+        template = re.sub(r"__LANGUAGE__", book.language, template)
+        
+        # if len(book.series) and len(book.series[0].name):
+        #     template = re.sub(r"__SERIES__", book.series[0].name, template)
+        #     template = re.sub(r"__SERIESPART__", book.series[0].part, template)
+        # else:
+        #     template = re.sub(r"__SERIES__", "", template)
+        #     template = re.sub(r"__SERIESPART__", "", template)
 
-    
-    # if len(book.series) and len(book.series[0].name):
-    #     template = re.sub(r"__SERIES__", book.series[0].name, template)
-    #     template = re.sub(r"__SERIESPART__", book.series[0].part, template)
-    # else:
-    #     template = re.sub(r"__SERIES__", "", template)
-    #     template = re.sub(r"__SERIESPART__", "", template)
-
-    opfFile=os.path.join(path, "metadata.opf")
-    with open(opfFile, mode='w', encoding='utf-8') as file:
-        file.write(template)
+        opfFile=os.path.join(path, "metadata.opf")
+        with open(opfFile, mode='w', encoding='utf-8') as file:
+            file.write(template)
+    except Exception as e:
+        print (f"Error creating OPF file {path}: {e}")
 
     return
 
