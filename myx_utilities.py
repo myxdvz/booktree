@@ -254,7 +254,7 @@ def getLogHeaders():
 
 def createOPF(book, path):
     # --- Generate .opf Metadata file ---
-    opfTemplate=os.path.join(os.getcwd(), "booktemplate.opf") 
+    opfTemplate=os.path.join(os.getcwd(), "templates/booktemplate.opf") 
     with open(opfTemplate, mode='r') as file:
         template = file.read()
 
