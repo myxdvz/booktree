@@ -8,10 +8,12 @@ import myx_utilities
 
 
 #MAM Functions
-def searchMAM(cfg, titleFilename, authors, extension, lang_code=None, audiobook=False, ebook=False):
+def searchMAM(cfg, titleFilename, authors, extension):
     #Config
     session = cfg.get("Config/session")
     log_path = cfg.get("Config/log_path")
+    ebook = bool(cfg.get("Config/flags/ebooks"))
+    audiobook = not (ebook)
     
     #put paren around authors and titleFilename
     if len(authors):
@@ -92,9 +94,9 @@ def searchMAM(cfg, titleFilename, authors, extension, lang_code=None, audiobook=
 
     return None
 
-def getMAMBook(cfg, titleFilename="", authors="", extension="", ebooks=False):
+def getMAMBook(cfg, titleFilename="", authors="", extension=""):
     books=[]
-    mamBook=searchMAM(cfg, titleFilename, authors, extension, 1, (not ebooks), ebooks)
+    mamBook=searchMAM(cfg, titleFilename, authors, extension)
     if (mamBook is not None):
         for b in mamBook:
             #pprint(b)

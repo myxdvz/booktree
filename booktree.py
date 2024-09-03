@@ -360,7 +360,7 @@ if __name__ == "__main__":
                 main(cfg)
             except Exception as e:
                 print(f"\nThere was a problem reading your config file {myx_args.params.config_file}: {e}\n")
-                
+
         else:
             print(f"\nYour config path is invalid. Please check and try again!\n\tConfig file path:{myx_args.params.config_file}\n")
 

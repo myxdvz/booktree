@@ -215,7 +215,7 @@ class BookFile:
             metadata= r["format"]["tags"]
         except Exception as e:
             metadata=dict()
-            print (f"ffprobe failed on {self.file}: {e}")
+            #print (f"ffprobe failed on {self.file}: {e}")
 
         #parse and create a book object
         # format|tag:title=In the Likely Event (Unabridged)|tag:artist=Rebecca Yarros|tag:album=In the Likely Event (Unabridged)|tag:AUDIBLE_ASIN=B0BXM2N523
@@ -388,7 +388,8 @@ class MAMBook:
             metadata=myx_utilities.probe_file(file)["format"]["tags"]
         except Exception as e:
             #ignore errors
-            print (f"\nffprobe failed on {self.name}: {e}")
+            print ("", end="")
+            #print (f"\nffprobe failed on {self.name}: {e}")
 
         if (metadata is not None):
             #parse and create a book object
@@ -605,6 +606,7 @@ class MAMBook:
     def getMAMBooks(self, cfg, bookFile:BookFile):
         #Config variables
         verbose = bool(cfg.get("Config/flags/verbose"))
+        ebooks = bool(cfg.get("Config/flags/ebooks"))
         add_narrators = bool(cfg.get("Config/flags/add_narrators"))
         fuzzy_match = cfg.get("Config/fuzzy_match")
 
@@ -616,7 +618,6 @@ class MAMBook:
         # Search using book key and authors (using or search in case the metadata is bad)
         print(f"Searching MAM for\n\tTitleFilename: {title}\n\tauthors:{authors}")
         books=myx_mam.getMAMBook(cfg, titleFilename=title, authors=authors, extension=extension)
-        #pprint (books)
 
         # was the author inaccurate? (Maybe it was LastName, FirstName or accented)
         # print (f"Trying again because Filename, Author = {len(self.mamMatches)}")
@@ -629,7 +630,7 @@ class MAMBook:
         self.mamMatches = books
         book = self.ffprobeBook
 
-        if (self.mamMatches is not None):
+        if (not ebooks) and (self.mamMatches is not None) and (book is not None):
             if (verbose):
                 print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
 
@@ -665,6 +666,11 @@ class MAMBook:
                     if (matchRate[fuzzy_match] > bestMatchRate):
                         bestMatchRate=matchRate[fuzzy_match]
                         self.bestMAMMatch=abook
+        else:
+            #no metadata, get the first match?
+            if len(self.mamMatches):
+                self.bestMAMMatch = books[0]
+
 
         #pprint(self.bestMAMMatch)
         if (books is not None): 
