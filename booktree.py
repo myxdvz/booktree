@@ -371,12 +371,13 @@ if __name__ == "__main__":
 
                     run(cfg)
                     print(f'Next run in {humanize.precisedelta(timedelta(seconds=schedule.idle_seconds()))}.')
+                    myx_utilities.printDivider()
 
                     while True:
-                        n = schedule.idle_seconds()
-                        time.sleep(n)
+                        time.sleep(schedule.idle_seconds())
                         schedule.run_pending()
-                        print(f'Next run in {humanize.precisedelta(timedelta(seconds=n))}.')
+                        print(f'Next run in {humanize.precisedelta(timedelta(seconds=schedule.idle_seconds()))}.')
+                        myx_utilities.printDivider()
                 else:
                     print(f'Mode: \'{mode}\' is not a valid mode. Supported modes: run, scheduled. Please check your config file and try again.')
 
