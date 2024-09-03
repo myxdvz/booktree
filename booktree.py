@@ -1,7 +1,8 @@
 from pathlib import Path
 from pprint import pprint
-from datetime import datetime
+from datetime import datetime, timedelta
 from glob import iglob, glob
+import time
 import os, sys, subprocess, shlex, re
 import myx_classes
 import myx_audible
@@ -10,6 +11,8 @@ import myx_mam
 import myx_args
 import csv
 import httpx
+import schedule
+import humanize
 
 #Main Functions
 def buildTreeFromLog(files, logfile, cfg):
@@ -309,9 +312,7 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
 
     return
 
-
-def main(cfg):
-    #make sure log_path exists
+def run(cfg):
     log_path=cfg.get("Config/log_path")
     if (len(log_path)==0):
         log_path=os.path.join(os.getcwd(),"logs")    
@@ -355,9 +356,30 @@ if __name__ == "__main__":
             try:
                 #import config
                 cfg = myx_args.Config(myx_args.params)
-            
-                #start the program
-                main(cfg)
+
+                mode = cfg.get("Config/mode")
+                if mode == 'run':
+                  print(f'Mode: \'{mode}\'. Script will run once and exit.')
+                  run(cfg)
+                elif mode == 'scheduled':
+                    scheduler_period = int(cfg.get("Config/scheduler_period"))
+                    print(f'Mode: \'{mode}\'. Script will run every {humanize.precisedelta(timedelta(minutes=scheduler_period))}.')
+
+                    schedule.clear()
+                    schedule.every(scheduler_period).minutes.do(run, cfg=cfg)
+                    next_run = datetime.now() + timedelta(minutes=scheduler_period)
+
+                    run(cfg)
+                    print(f'Next run in {humanize.precisedelta(timedelta(seconds=schedule.idle_seconds()))}.')
+
+                    while True:
+                        n = schedule.idle_seconds()
+                        time.sleep(n)
+                        schedule.run_pending()
+                        print(f'Next run in {humanize.precisedelta(timedelta(seconds=n))}.')
+                else:
+                    print(f'Mode: \'{mode}\' is not a valid mode. Supported modes: run, scheduled. Please check your config file and try again.')
+
             except Exception as e:
                 print(f"\nThere was a problem reading your config file {myx_args.params.config_file}: {e}\n")
                 

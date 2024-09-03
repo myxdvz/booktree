@@ -3,3 +3,5 @@ langcodes==3.4.0
 pathvalidate==3.2.0
 Requests==2.32.3
 thefuzz==0.22.1
+schedule==1.2.2
+humanize==4.10.0
