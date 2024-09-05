@@ -72,11 +72,11 @@ class Book:
         #remove author
         title = self.title
         for author in self.authors:
-            title = re.sub (f"{author.name}", "", title, flags=re.IGNORECASE)
+            title = re.sub (f"{re.escape(author.name)}", "", title, flags=re.IGNORECASE)
 
         # #remove series
         for s in self.series:
-            title = re.sub (f"{s.name}", "", title, flags=re.IGNORECASE)
+            title = re.sub (f"{re.escape(s.name)}", "", title, flags=re.IGNORECASE)
 
         #Remove the rest
         title = myx_utilities.cleanseTitle(title, True, True)
