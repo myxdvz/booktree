@@ -195,6 +195,8 @@ class BookFile:
     def getFileName(self):
         return os.path.basename(self.file)
         
+    def 
+
     def __probe_file__ (self):
         #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
         cmnd = ['ffprobe','-loglevel','error','-show_entries','format_tags:format=duration', '-of', 'default=noprint_wrappers=1:nokey=0', '-print_format', 'json', self.fullPath]
@@ -203,9 +205,6 @@ class BookFile:
         #pprint(json.loads(out))
         return json.loads(out)
 
-    def __getBookFromTag__ (self, id3Title, book):
-        return myx_utilities.getBookFromTag (id3Title, book)
-    
     def ffprobe(self, parent):
         #ffprobe the file
         duration=0

@@ -10,6 +10,7 @@ def getAudibleBook(client, cfg, asin="", title="", authors="", narrators="", key
 
     enBooks=[]
     cacheKey = myx_utilities.getHash(f"{asin}{title}{authors}{narrators}{keywords}")
+    books={}
     if myx_utilities.isCached(cacheKey, "audible", cfg):
         print (f"Retrieving {cacheKey} from audible")
 
