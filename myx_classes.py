@@ -194,8 +194,6 @@ class BookFile:
 
     def getFileName(self):
         return os.path.basename(self.file)
-        
-    def 
 
     def __probe_file__ (self):
         #ffprobe -loglevel error -show_entries format_tags=artist,album,title,series,part,series-part,isbn,asin,audible_asin,composer -of default=noprint_wrappers=1:nokey=0 -print_format compact "$file")
