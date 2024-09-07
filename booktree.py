@@ -163,55 +163,53 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
     #Let's assume that all books are folders, so a file has a parent folder
     print(f"\nCategorizing books from {len(allFiles)} files, please wait...\n")
     for f in allFiles:
-        if os.path.isfile(f):
-            #for each book file
-            print(f"Categorizing: {f}\r", end="\r")
+        #for each book file
+        print(f"Categorizing: {f}\r", end="\r")
 
-            #create a bookFile
-            fullpath=os.path.join(path, f)
-            bf=myx_classes.BookFile(f, fullpath, path, mediaPath)
+        #create a bookFile
+        fullpath=os.path.join(path, f)
+        bf=myx_classes.BookFile(f, fullpath, path, mediaPath)
 
-            #create dictionary using book (assumed to be the the parent Folder) as the key
-            #if there's no parent folder or if multibook is on, then the filename is the key
-            if ((multibook) or (bf.hasNoParentFolder())):
-                key=bf.getFileName()
-            else:
-                key=bf.getParentFolder()
+        #create dictionary using book (assumed to be the the parent Folder) as the key
+        #if there's no parent folder or if multibook is on, then the filename is the key
+        if ((multibook) or (bf.hasNoParentFolder())):
+            key=bf.getFileName()
+        else:
+            key=bf.getParentFolder()
 
-            #read metadata
-            bf.ffprobe(key)
+        #read metadata
+        bf.ffprobe(key)
 
-            #at this point, the books is either at the root, or under a book folder
-            #print (f"Adding {bf.fullPath}\nParent:{bf.getParentFolder()}", end="\r")
+        #at this point, the books is either at the root, or under a book folder
+        #print (f"Adding {bf.fullPath}\nParent:{bf.getParentFolder()}", end="\r")
 
-            #if the book exists, this must be multi-file book, append the files
-            hashKey=myx_utilities.getHash(str(key))
-            #print (f"Book: {key}\nHashKey: {hashKey}")
-            if hashKey in book:
-                book[hashKey].files.append(bf)
-            else:
-                #New MAMBook file has a name, a file and a ffprobeBook
+        #if the book exists, this must be multi-file book, append the files
+        hashKey=myx_utilities.getHash(str(key))
+        #print (f"Book: {key}\nHashKey: {hashKey}")
+        if hashKey in book:
+            book[hashKey].files.append(bf)
+        else:
+            #New MAMBook file has a name, a file and a ffprobeBook
+            book[hashKey]=myx_classes.MAMBook(key)
+            book[hashKey].ffprobeBook=bf.ffprobeBook
+            book[hashKey].isSingleFile=(multibook) or (bf.hasNoParentFolder())
+            book[hashKey].files.append(bf)
+            book[hashKey].metadata = "id3"
+
+        #add books from multi-book collections
+        for mbc in multiBookCollections:
+            #print (f"NewBook: {mbc.name}  Files: {len(mbc.files)}", end="\r")
+            #for multi-book collection, each file IS a book
+            for f in mbc.files:
+                print (f"Adding {f.file} as a new book", end="\r")
+                key=str(os.path.basename(f.file)) 
+                hashKey=myx_utilities.getHash(key)
                 book[hashKey]=myx_classes.MAMBook(key)
-                book[hashKey].ffprobeBook=bf.ffprobeBook
-                book[hashKey].isSingleFile=(multibook) or (bf.hasNoParentFolder())
-                book[hashKey].files.append(bf)
-                book[hashKey].metadata = "id3"
-
-            #add books from multi-book collections
-            for mbc in multiBookCollections:
-                #print (f"NewBook: {mbc.name}  Files: {len(mbc.files)}", end="\r")
-                #for multi-book collection, each file IS a book
-                for f in mbc.files:
-                    print (f"Adding {f.file} as a new book", end="\r")
-                    key=str(os.path.basename(f.file)) 
-                    hashKey=myx_utilities.getHash(key)
-                    book[hashKey]=myx_classes.MAMBook(key)
-                    #multi book collection titles are almost always bad, so don't even try to use it for search
-                    f.ffprobeBook.title=""
-                    book[hashKey].ffprobeBook=f.ffprobeBook
-                    book[hashKey].isSingleFile=True
-                    book[hashKey].files.append(f)
-        #endif os.path.isfile(f):
+                #multi book collection titles are almost always bad, so don't even try to use it for search
+                f.ffprobeBook.title=""
+                book[hashKey].ffprobeBook=f.ffprobeBook
+                book[hashKey].isSingleFile=True
+                book[hashKey].files.append(f)
 
     #for multi-file folders/book - check if there are any multi-book collections
     if multibook:
