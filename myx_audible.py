@@ -34,7 +34,7 @@ def getAudibleBook(client, cfg, asin="", title="", authors="", narrators="", key
                     "keywords": keywords,
                     "products_sort_by": "Relevance",
                     "response_groups": (
-                        "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
+                        "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs, category_ladders"
                     )
                 },
             )
@@ -67,7 +67,7 @@ def getBookByAsin(client, asin):
             f"https://api.audible.com/1.0/catalog/products/{asin}",
             params={
                 "response_groups": (
-                    "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs"
+                    "series, product_attrs, relationships, contributors, product_desc, product_extended_attrs, category_ladders"
                 )
             },
         )
@@ -88,7 +88,7 @@ def getBookByAuthorTitle(client, author, title, language="english"):
                 "author": myx_utilities.strip_accents(author),
                 "title": title,
                 "response_groups": (
-                    "series, product_attrs, contributors, product_desc, product_extended_attrs"
+                    "series, product_attrs, contributors, product_desc, product_extended_attrs, category_ladders"
                 )
             },
         )
@@ -122,13 +122,39 @@ def product2Book(product):
         if 'narrators' in product: 
             for narrator in product["narrators"]:
                 book.narrators.append(myx_classes.Contributor(str(narrator["name"])))
-        if 'publication_name' in product: book.publicationName=str(product["publication_name"])
+        if 'publisher_name' in product: book.publisher=str(product["publisher_name"])
+        if 'publication_datetime' in product: book.publishYear=str(product["publication_datetime"])
         if 'series' in product: 
             for s in product["series"]:
                 book.series.append(myx_classes.Series(str(s["title"]), str(s["sequence"])))
         if 'language' in product: book.language=str(product ["language"])
-
-            
+        if 'category_ladders' in product:
+            for cl in product["category_ladders"]:
+                for i, item in enumerate(cl["ladder"]):
+                    #the first one is genre, the rest are tags
+                    if (i==0):
+                        book.genres.append(item["name"])
+                    else:
+                        book.tags.append(item["name"])            
         return book
     else:
+        return None
+
+def loadMetadataJSON (bf):
+    filename = str(bf.getFileName())
+    filename = filename.replace(bf.getExtension(), "metadata.json")
+    metadatafile = os.path.join(bf.sourcePath, os.path.dirname(bf.file), filename)
+
+    print (f"Book Path: {os.path.dirname(bf.file)}\r\nMetadata: {metadatafile}")
+
+    #check if the file exists
+    if os.path.exists(metadatafile):
+        with open(metadatafile) as json_file:
+            product = json.loads (json_file.read())
+        #pprint(product)
+        book = product2Book(product)
+        #pprint(book)
+        return book
+    else:
+        print ("Metadata file not found")
         return None

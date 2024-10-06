@@ -9,12 +9,14 @@
     <dc:title>__TITLE__</dc:title>
     <dc:subtitle>__SUBTITLE__</dc:subtitle>
     <dc:description><![CDATA[ __DESCRIPTION__ ]]></dc:description>
-
-__AUTHORS__
-__NARRATORS__    
+  __AUTHORS__
+  __NARRATORS__    
+    <dc:publisher>__PUBLISHER__</dc:publisher>
+    <dc:date>__YEAR__</dc:date> 
     <dc:language>__LANGUAGE__</dc:language>
     <dc:identifier opf:scheme="ASIN">__ASIN__</dc:identifier>
-__SERIES__
-    <dc:tag></dc:tag>
+  __SERIES__
+  __GENRES__
+  __TAGS__
   </ns0:metadata>
 </ns0:package>
