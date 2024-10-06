@@ -278,6 +278,7 @@ class BookFile:
     def getConfigTargetPath(self, cfg, book):
         #Config
         media_path = self.mediaPath
+        multi_author = cfg.get("Config/target_path/multi_author")
         in_series = cfg.get("Config/target_path/in_series")
         no_series = cfg.get("Config/target_path/no_series")
         disc_folder = cfg.get("Config/target_path/disc_folder")
@@ -288,10 +289,19 @@ class BookFile:
             if ((book.authors is not None) and (len(book.authors) == 0)):
                 author="Unknown"
             else:
-                author=book.authors[0].name  
+                match multi_author:
+                    case None, "first_author": 
+                        author=book.authors[0].name  
+                    
+                    case "authors":
+                        author=book.getAuthors()
+
+                    case _: 
+                        author=multi_author
 
             #standardize author name (replace . with space, and then make sure that there's only single space)
-            author=myx_utilities.cleanseAuthor(author)
+            if len(author):
+                author=myx_utilities.cleanseAuthor(author)
 
             #Get primary narrator
             if ((book.narrators is not None) and (len(book.narrators) == 1)):
@@ -320,7 +330,11 @@ class BookFile:
             tokens["title"] = sanitize_filename(book.title)
             tokens["cleanTitle"] = sanitize_filename(title)
             tokens["disc"] = sanitize_filename(disc)
-            tokens["narrator"] = f"{{{sanitize_filename(narrator)}}}"
+
+            if len(narrator):
+                tokens["narrator"] = f"{{{sanitize_filename(narrator)}}}"
+            else:
+                tokens["narrator"] = ""
 
             sPath = ""
             if len(book.series):
