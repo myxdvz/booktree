@@ -299,6 +299,9 @@ class BookFile:
                     case _: 
                         author=multi_author
 
+            if (author is None):
+                author=book.authors[0].name  
+
             #standardize author name (replace . with space, and then make sure that there's only single space)
             if len(author):
                 author=myx_utilities.cleanseAuthor(author)
