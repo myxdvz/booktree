@@ -18,9 +18,6 @@ RUN echo "**** installing system packages ****" \
     && mkdir -p /venv \
     && python -m venv /venv \
     && source /venv/bin/activate \ 
-    && wget -O /booktree https://github.com/myxdvz/booktree/archive/refs/heads/main.zip \
-    && chmod +x /booktree \
-    && unzip /booktree \
     && pip install --no-cache-dir --requirement /booktree-main/requirements.txt \
     && pip install --upgrade pip \
     && rm -rf booktree \
