@@ -353,7 +353,7 @@ def isCached(key, category, cfg):
         print (f"Checking cache: {category}/{key}...")
     
     #Check if this book's hashkey exists in the cache, if so - it's been processed
-    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    bookFile = os.path.join(getCachePath(cfg), "__cache__", category, key)
     found = os.path.exists(bookFile)  
     return found      
     
@@ -362,7 +362,7 @@ def cacheMe(key, category, content, cfg):
     verbose = bool(cfg.get("Config/flags/verbose"))
 
     #create the cache file
-    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    bookFile = os.path.join(getCachePath(cfg), "__cache__", category, key)
     with open(bookFile, mode="w", encoding='utf-8', errors='ignore') as file:
         file.write(json.dumps(content))
 
@@ -370,9 +370,9 @@ def cacheMe(key, category, content, cfg):
         print(f"Caching {key} in File: {bookFile}")
     return os.path.exists(bookFile)        
 
-def loadFromCache(key, category):
+def loadFromCache(key, category, cfg):
     #return the content from the cache file
-    bookFile = os.path.join(os.getcwd(), "__cache__", category, key)
+    bookFile = os.path.join(getCachePath(cfg), "__cache__", category, key)
     with open(bookFile, mode='r', encoding='utf-8') as file:
         f = file.read()
     
@@ -545,4 +545,28 @@ def initMetadataJSON(book, path):
             #Initialize the metadata with the template
             book.metadata = json.loads(json_file.read())
 
-            
+def getLogPath(cfg):
+    #make sure log_path exists
+    log_path=cfg.get("Config/log_path")
+
+    if (log_path is None) or (len(log_path)==0):
+        log_path=os.path.join(os.getcwd(),"logs")        
+
+    if not os.path.exists(os.path.abspath(log_path)):
+        os.makedirs(os.path.abspath(log_path), exist_ok=True)
+
+    return log_path
+
+def getCachePath(cfg):
+    #make sure log_path exists
+    cache_path=cfg.get("Config/cache_path")
+
+    if (cache_path is None) or (len(cache_path)==0):
+        cache_path=os.path.join(os.getcwd(),"logs")        
+
+    #build __cache__ folders if they don't exist
+    os.makedirs(os.path.join(cache_path, "__cache__", "book"), exist_ok=True)
+    os.makedirs(os.path.join(cache_path, "__cache__", "mam"), exist_ok=True)
+    os.makedirs(os.path.join(cache_path, "__cache__", "audible"), exist_ok=True)
+
+    return cache_path

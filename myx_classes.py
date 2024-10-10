@@ -581,9 +581,10 @@ class MAMBook:
             #for each file for this book                
             for f in self.files:
                 #UPDATED 8/30 to allow users to customize target_path formats  
-                if metadata == "log":
+                if ((metadata == "log") and self.isMatched):
                     p = self.paths
-                else:
+                
+                if (len(p)) == 0:
                     p = f.getConfigTargetPath(cfg, self.metadataBook)
 
                 print (f"{prefix}Hardlinking files for {self.metadataBook.title}")
@@ -740,7 +741,7 @@ class MAMBook:
     def cacheMe(self, category, content, cfg):
         return myx_utilities.cacheMe(self.getHashKey(),category, content, cfg) 
         
-    def loadFromCache(self, category):
-        return myx_utilities.loadFromCache(self.getHashKey(), category)
+    def loadFromCache(self, category, cfg):
+        return myx_utilities.loadFromCache(self.getHashKey(), category, cfg)
 
 

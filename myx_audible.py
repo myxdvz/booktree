@@ -15,7 +15,7 @@ def getAudibleBook(client, cfg, asin="", title="", authors="", narrators="", key
         print (f"Retrieving {cacheKey} from audible")
 
         #this search has been done before, retrieve the results
-        books = myx_utilities.loadFromCache(cacheKey, "audible")
+        books = myx_utilities.loadFromCache(cacheKey, "audible", cfg)
 
     else:
         try:

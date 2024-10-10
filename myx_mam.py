@@ -29,7 +29,7 @@ def searchMAM(cfg, titleFilename, authors, extension):
     
     if myx_utilities.isCached(cacheKey, "mam", cfg):
         #this search has been done before, load results from cache
-        results = myx_utilities.loadFromCache(cacheKey, "mam")
+        results = myx_utilities.loadFromCache(cacheKey, "mam", cfg)
         return (results["data"])
     
     else:

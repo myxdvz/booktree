@@ -99,7 +99,6 @@ def buildTreeFromLog(files, logfile, cfg):
                         book[b].getAudibleBooks(httpx, book[b].ffprobeBook, cfg)
                         if (book[b].bestAudibleMatch is not None):
                             book[b].metadata = "audible"                    
-                            bf.getConfigTargetPath(cfg, book[b].bestAudibleMatch)
 
                     print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
                     myx_utilities.printDivider()
@@ -318,13 +317,9 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
 
 
 def main(cfg):
-    #make sure log_path exists
-    log_path=cfg.get("Config/log_path")
-    if (len(log_path)==0):
-        log_path=os.path.join(os.getcwd(),"logs")    
-    
-    if not os.path.exists(os.path.abspath(log_path)):
-        os.makedirs(os.path.abspath(log_path), exist_ok=True)
+    #make sure log_path and cache path exists
+    log_path=myx_utilities.getLogPath(cfg)
+    cache_path=myx_utilities.getCachePath(cfg)
 
     #create the logfile
     logfile=os.path.join(os.path.abspath(log_path),f"booktree_log_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv")
@@ -349,11 +344,6 @@ if __name__ == "__main__":
     if not sys.version_info > (3, 10):
         print ("booktree requires python 3.10 or higher. Please upgrade your version")
     else:
-        #build __cache__ folders if they don't exist
-        os.makedirs(os.path.join(os.getcwd(), "__cache__", "book"), exist_ok=True)
-        os.makedirs(os.path.join(os.getcwd(), "__cache__", "mam"), exist_ok=True)
-        os.makedirs(os.path.join(os.getcwd(), "__cache__", "audible"), exist_ok=True)
-
         #process commandline arguments
         myx_args.params = myx_args.importArgs()
 
