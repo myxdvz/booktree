@@ -283,24 +283,22 @@ class BookFile:
         no_series = cfg.get("Config/target_path/no_series")
         disc_folder = cfg.get("Config/target_path/disc_folder")
 
-
         if (book is not None):
             #Get primary author
             if ((book.authors is not None) and (len(book.authors) == 0)):
                 author="Unknown"
+            elif ((book.authors is not None) and (len(book.authors) > 1) and (multi_author is not None)):
+                    match multi_author:
+                        case "first_author": 
+                            author=book.authors[0].name  
+                        
+                        case "authors":
+                            author=book.getAuthors()
+
+                        case _: 
+                            author=multi_author
             else:
-                match multi_author:
-                    case None, "first_author": 
-                        author=book.authors[0].name  
-                    
-                    case "authors":
-                        author=book.getAuthors()
-
-                    case _: 
-                        author=multi_author
-
-            if (author is None):
-                author=book.authors[0].name  
+                author=book.authors[0].name
 
             #standardize author name (replace . with space, and then make sure that there's only single space)
             if len(author):
