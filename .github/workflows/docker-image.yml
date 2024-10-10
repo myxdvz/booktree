@@ -20,8 +20,5 @@ jobs:
        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build and push to dockerhub
-      uses: docker/build-push-action@v5
-      with:
-       context:
-       push: true
-       tags: myxdvz/booktree:autogen
+      run: docker build . --file Dockerfile --tag myxdvz/booktree:$(date +%s) --build-arg UID=1000 --build-arg GID=1000 --build-arg USER=booktree --build-arg GROUPNAME=booktree
+      
