@@ -581,10 +581,11 @@ class MAMBook:
             #for each file for this book                
             for f in self.files:
                 #UPDATED 8/30 to allow users to customize target_path formats  
+                p = ""
                 if ((metadata == "log") and self.isMatched):
                     p = self.paths
                 
-                if (len(p)) == 0:
+                if (len(p) == 0):
                     p = f.getConfigTargetPath(cfg, self.metadataBook)
 
                 print (f"{prefix}Hardlinking files for {self.metadataBook.title}")
