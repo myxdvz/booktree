@@ -19,7 +19,7 @@ RUN echo "**** installing system packages ****" \
     && mkdir -p /venv \
     && python -m venv /venv \
     && source /venv/bin/activate \ 
-    && pip install --no-cache-dir --requirement /booktree/requirements.txt \
+    && pip install --no-cache-dir --requirement requirements.txt \
     && pip install --upgrade pip \
     && if getent passwd ${UID} >/dev/null; then deluser $(getent passwd ${UID} | cut -d: -f1); fi \
     && if getent group ${GID} >/dev/null; then delgroup $(getent group ${GID} | cut -d: -f1); fi \
