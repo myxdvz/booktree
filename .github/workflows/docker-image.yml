@@ -30,6 +30,5 @@ jobs:
         USER="booktree"
         GROUPNAME="booktree" 
        tags: |
-        myxdvz/booktree:$(date +%s)
         myxdvz/booktree:test
        
