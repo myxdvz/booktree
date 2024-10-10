@@ -27,8 +27,8 @@ jobs:
        build-args: |
         UID=1000
         GID=1000
-        USER="booktree"
-        GROUPNAME="booktree" 
+        USER=booktree
+        GROUPNAME=booktree 
        tags: |
         myxdvz/booktree:test
        
