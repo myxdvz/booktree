@@ -334,8 +334,10 @@ class BookFile:
 
             if len(narrator):
                 tokens["narrator"] = f"{{{sanitize_filename(narrator)}}}"
+                tokens["narrators"] = f"{{{sanitize_filename(narrator)}}}"
             else:
                 tokens["narrator"] = ""
+                tokens["narrators"] = ""
 
             sPath = ""
             if len(book.series):
