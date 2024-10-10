@@ -24,4 +24,4 @@ jobs:
       with:
        context:
        push: true
-       tags: myxdvz/booktree:$(date +%s)
+       tags: myxdvz/booktree:autogen
