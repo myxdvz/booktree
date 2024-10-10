@@ -42,7 +42,7 @@ def buildTreeFromLog(files, logfile, cfg):
                         bf=myx_classes.BookFile(f, fullpath, str(row["sourcePath"]), str(row["mediaPath"]), isHardlinked=bool(row["isHardLinked"]))
                         
                         #parse authors and series
-                        bf.ffprobeBook = myx_classes.Book(asin=str(row["id3-asin"]), title=str(row["id3-title"]), subtitle=row["id3-subtitle"], publicationName=row["id3-publicationName"], length=row["id3-length"], duration=row["id3-duration"], language=row["id3-language"])
+                        bf.ffprobeBook = myx_classes.Book(asin=str(row["id3-asin"]), title=str(row["id3-title"]), subtitle=row["id3-subtitle"], publisher=row["id3-publisher"], length=row["id3-length"], duration=row["id3-duration"], language=row["id3-language"])
                         bf.isMatched = bool(row["isMatched"])
                         bf.ffprobeBook.setAuthors(row["id3-authors"])
                         bf.ffprobeBook.setNarrators(row["id3-narrators"])
@@ -63,9 +63,15 @@ def buildTreeFromLog(files, logfile, cfg):
 
                             if book[hashKey].isMatched:
                                 if book[hashKey].metadata == "audible":
-                                    book[hashKey].bestAudibleMatch = myx_classes.Book(asin=str(row["adb-asin"]), title=str(row["adb-title"]), subtitle=row["adb-subtitle"], publicationName=row["adb-publicationName"], length=row["adb-length"], duration=row["adb-duration"], language=row["adb-language"])
+                                    book[hashKey].bestAudibleMatch = myx_classes.Book(asin=str(row["adb-asin"]), title=str(row["adb-title"]), subtitle=row["adb-subtitle"], publisher=row["adb-publisher"], length=row["adb-length"], duration=row["adb-duration"], language=row["adb-language"])
+                                    book[hashKey].bestAudibleMatch.setAuthors(row["adb-authors"])
+                                    book[hashKey].bestAudibleMatch.setNarrators(row["adb-narrators"])
+                                    book[hashKey].bestAudibleMatch.setSeries(row["adb-seriesparts"])                                
                                 elif book[hashKey].metadata == "mam":
-                                    book[hashKey].bestMAMMatch = myx_classes.Book(asin=str(row["mam-asin"]), title=str(row["mam-title"]), subtitle=row["mam-subtitle"], publicationName=row["mam-publicationName"], length=row["mam-length"], duration=row["mam-duration"], language=row["mam-language"])
+                                    book[hashKey].bestMAMMatch = myx_classes.Book(asin=str(row["mam-asin"]), title=str(row["mam-title"]), subtitle=row["mam-subtitle"], publisher=row["mam-publisher"], length=row["mam-length"], duration=row["mam-duration"], language=row["mam-language"])
+                                    book[hashKey].bestMAMMatch.setAuthors(row["mam-authors"])
+                                    book[hashKey].bestMAMMatch.setNarrators(row["mam-narrators"])
+                                    book[hashKey].bestMAMMatch.setSeries(row["mam-seriesparts"])                                
 
                     i += 1
             except csv.Error as e:
@@ -93,6 +99,7 @@ def buildTreeFromLog(files, logfile, cfg):
                         book[b].getAudibleBooks(httpx, book[b].ffprobeBook, cfg)
                         if (book[b].bestAudibleMatch is not None):
                             book[b].metadata = "audible"                    
+                            bf.getConfigTargetPath(cfg, book[b].bestAudibleMatch)
 
                     print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
                     myx_utilities.printDivider()
