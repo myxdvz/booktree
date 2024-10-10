@@ -9,7 +9,7 @@ ENV GROUPNAME=${GROUPNAME}
 ENV UID=${UID}
 ENV GID=${GID}
 
-COPY requirements.txt /booktree/requirements.txt
+COPY . /booktree/
 WORKDIR /booktree 
 RUN echo "**** installing system packages ****" \
     && apk update \
