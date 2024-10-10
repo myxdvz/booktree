@@ -9,6 +9,7 @@ ENV GROUPNAME=${GROUPNAME}
 ENV UID=${UID}
 ENV GID=${GID}
 
+WORKDIR /booktree 
 RUN echo "**** installing system packages ****" \
     && apk update \
     && apk add --update --no-cache python3 py3-pip \
@@ -18,10 +19,8 @@ RUN echo "**** installing system packages ****" \
     && mkdir -p /venv \
     && python -m venv /venv \
     && source /venv/bin/activate \ 
-    && pip install --no-cache-dir --requirement /booktree-main/requirements.txt \
+    && pip install --no-cache-dir --requirement /booktree/requirements.txt \
     && pip install --upgrade pip \
-    && rm -rf booktree \
-    && mv booktree-main booktree \
     && if getent passwd ${UID} >/dev/null; then deluser $(getent passwd ${UID} | cut -d: -f1); fi \
     && if getent group ${GID} >/dev/null; then delgroup $(getent group ${GID} | cut -d: -f1); fi \
     && addgroup --system --gid ${GID} ${GROUPNAME} \
@@ -29,7 +28,6 @@ RUN echo "**** installing system packages ****" \
     && chown -R ${UID}:${GID} /booktree
 
 USER ${USER}
-WORKDIR /booktree 
 VOLUME /config
 VOLUME /logs
 VOLUME /data
