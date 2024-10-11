@@ -9,11 +9,11 @@ It does the following:
   - create a tree structure on the target folder, ideally your media folder (like your abs audiobook library folder)
   - hardlink the audiobook file to the target folder
 
-<mark>booktree</mark> builds the following heirarchy on the target folder:
+<mark>booktree</mark> builds the following heirarchy on the target folder (this is configurable):
 * <media_path>/Author/Title (If there is no series information)
 * <media_path>/Author/Series/Series #Part - Title
 
-The above format is the default. User can modify/tweak this in the config
+The above format is the default. User can modify/tweak this in the config file.  See [Config File Documentation](CONFIG.md)
 
 ## Usage:
 

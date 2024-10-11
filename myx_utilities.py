@@ -462,7 +462,7 @@ def getAltTitle(parent, book, cfg):
         altTitle = cleanseTitle(book.series[0].name)
         if len(altTitle) : skipSeries = True
 
-    print (f"Proxwaaing {altTitle}")
+    print (f"Processing {altTitle}")
     while True:
         #remove authors name in title
         for a in book.authors:
