@@ -124,6 +124,7 @@ def product2Book(product):
                 book.narrators.append(myx_classes.Contributor(str(narrator["name"])))
         if 'publisher_name' in product: book.publisher=str(product["publisher_name"])
         if 'publication_datetime' in product: book.publishYear=str(product["publication_datetime"])
+        if 'issue_date' in product: book.releaseDate=str(product["issue_date"])
         if 'series' in product: 
             for s in product["series"]:
                 book.series.append(myx_classes.Series(str(s["title"]), str(s["sequence"])))

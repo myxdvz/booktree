@@ -568,5 +568,6 @@ def getCachePath(cfg):
     os.makedirs(os.path.join(cache_path, "__cache__", "book"), exist_ok=True)
     os.makedirs(os.path.join(cache_path, "__cache__", "mam"), exist_ok=True)
     os.makedirs(os.path.join(cache_path, "__cache__", "audible"), exist_ok=True)
+    os.makedirs(os.path.join(cache_path, "__cache__", "mylib"), exist_ok=True)
 
     return cache_path

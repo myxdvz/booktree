@@ -51,6 +51,7 @@ class Book:
     snatched:bool=False
     description:str=""
     publishYear:str=""
+    releaseDate:str=""
     series:list[Series]= field(default_factory=list)
     authors:list[Contributor]= field(default_factory=list)
     narrators:list[Contributor]= field(default_factory=list)
@@ -392,6 +393,7 @@ class MAMBook:
     metadataBook:Book=None
     paths:str=""
     isMatched:bool=False
+    mamCount:int=-1
     mamIDs:list[str]= field(default_factory=list)
 
     def getRunTimeLength(self):

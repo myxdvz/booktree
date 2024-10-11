@@ -319,7 +319,6 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
 def main(cfg):
     #make sure log_path and cache path exists
     log_path=myx_utilities.getLogPath(cfg)
-    cache_path=myx_utilities.getCachePath(cfg)
 
     #create the logfile
     logfile=os.path.join(os.path.abspath(log_path),f"booktree_log_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv")
