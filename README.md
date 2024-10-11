@@ -40,7 +40,7 @@ The above format is the default. User can modify/tweak this in the config file. 
     *  id3-title
     *  id3-author
     *  id3-seriesparts
-3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log --file <updatedlogfile.csv>. I recommend having a separate log_config.json file for this 
+3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log /config/log_config.json. I recommend having a separate log_config.json file for this 
 
 ### Help
 ~~~
@@ -57,20 +57,6 @@ options:
   --dry-run             If provided, will override dryRun in config
 ~~~
 
-## FAQ
-  **Q:  Where is my config file?**
-  <p>A: You can copy the default_config.cfg into <somefile>.json.  Modify or add the values of paths: [{file, source_path, media_path}]</p>
-
-  **Q:  My files are not from MAM, can I still use this tool?**
-  <p>A: Use audible as metadata source, i.e., booktree.py audible</p>
-
-  **Q:  What if the mam or audible search returns multiple matches?**
-  <p>A: Fuzzymatch is used to get the best match</p>
-
-  **Q:  My metadata is not producing any match, what can I do?**
-  <p>A: Add --fixid3 parameter.</p>
-  
-
 ## Install
 * Python >= 3.10
 * ffmpeg
@@ -85,11 +71,23 @@ options:
 
 ## Disclaimers
 
-* While I have tested this on over 30K files and over 4K audiobooks, I have NOT tested this on Windows, some of the / should probably be \
 * It should work seamlessly on recent MAM books : single file or multi-file book under a single book folder
 * The script may not immediately work on older, multibook collections >> set multibook = true
 * The script may not immediately work on Multi-CD books
 * Hard linking will only work if the source and target paths are on the same volume
 
+## FAQ
+  **Q:  Where is my config file?**
+  <p>A: You can copy the default_config.cfg into <somefile>.json.  Modify or add the values of paths: [{file, source_path, media_path}]</p>
+
+  **Q:  My files are not from MAM, can I still use this tool?**
+  <p>A: Use audible as metadata source, Config/metadata = audible</p>
+
+  **Q:  What if the mam or audible search returns multiple matches?**
+  <p>A: Fuzzymatch is used to get the best match</p>
+
+  **Q:  My metadata is not producing any match, what can I do?**
+  <p>A: Lower the matchrate, Change the fuzzy_match algorith, Set --fixid3 flag.</p>
+  
 
 
