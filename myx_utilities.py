@@ -211,7 +211,7 @@ def logBooks(logFilePath, books, cfg):
             except csv.Error as e:
                 print(f"file {logFilePath}: {e}")
 
-def logMyLibrary (logFilePath, books, cfg):
+def logMyLibrary (cfg, logFilePath, books):
     if len(books):
         write_headers = not os.path.exists(logFilePath)
         with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
@@ -562,7 +562,7 @@ def getCachePath(cfg):
     cache_path=cfg.get("Config/cache_path")
 
     if (cache_path is None) or (len(cache_path)==0):
-        cache_path=os.path.join(os.getcwd(),"logs")        
+        cache_path=getLogPath(cfg)
 
     #build __cache__ folders if they don't exist
     os.makedirs(os.path.join(cache_path, "__cache__", "book"), exist_ok=True)

@@ -15,7 +15,7 @@ A copy of default_config.cfg can be found under the /templates folder.  It is re
         "paths": [{
             "files": ["**/*.m4b", "**/*.mp3", "**/*.m4a"],
             "source_path": "/path/to/downloads",
-            "media_path": "/path/to/ABS/library"
+            "media_path": "/path/to/media/library"
         }],
         "flags": {
             "dry_run": 0,

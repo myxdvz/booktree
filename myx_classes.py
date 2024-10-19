@@ -263,7 +263,7 @@ class BookFile:
             os.makedirs(target, exist_ok=True)
         
         #check if the file already exists in the target directory
-        filename=os.path.join(target, os.path.basename(source).split(os.sep)[-1])
+        filename=os.path.join(target, sanitize_filename(os.path.basename(source).split(os.sep)[-1]))
         if (not os.path.exists(filename)):
             try:
                 #print (f"Hardlinking {source} to {filename}")
@@ -345,17 +345,17 @@ class BookFile:
                 x = in_series.format (**tokens)
                 #use in_series format
                 for p in x.split ("/"):
-                    sPath=os.path.join (sPath, p)
+                    sPath=os.path.join (sPath, p.strip())
             else:
                 y = no_series.format (**tokens)
                 #use no_series format
                 for p in y.split ("/"):
-                    sPath=os.path.join (sPath, p)
+                    sPath=os.path.join (sPath, p.strip())
 
             #add disc for multidisc
             if len(disc):
                 z = disc_folder.format (**tokens)
-                sPath=os.path.join(sPath, z)
+                sPath=os.path.join(sPath, z.strip())
 
             return os.path.join(media_path, sPath)  
     

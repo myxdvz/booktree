@@ -1,5 +1,5 @@
 # booktree
-Reorganize your audiobooks using ID3, MAM or Audible metadata into a tree structure recommended and supported by media servers like Audibookshelf. The originals are untouched and will be hardlinked to their destination
+Reorganize your audiobooks using ID3 or Audible metadata into a tree structure recommended and supported by media servers like Audibookshelf. The originals are untouched and will be hardlinked to their destination
 
 It does the following:
 - take a source folder, ideally your downloads folder where your audiobook files are
@@ -27,7 +27,7 @@ The above format is the default. User can modify/tweak this in the config file. 
       * Check for rows where mamCount or audibleMatchCount is high (>3), if it is, just check if it picked the right match
     * Rows where isMatched = FALSE - there are many reasons why there won't be a match
       *  The book is NOT SOLD on Audible at all (or in your region)
-      *  The book/torrent has been deleted from MAM since you snatched it
+      *  The book/torrent has been deleted since you snatched it
       *  The ID3 metadata is empty or bad, e.g., Author/Narrator that's not comma delimited, bad title and series information
 4.  If everything looks good, rerun booktree without the --dry-run parameter
 5.  Recategorize/Set Location (in you client, e.g., Qbit), to where you have your "processed" files to optimize performance. It's ok if you don't, the script will add them to the list of files to be processed, but will skip processing them if they have already been processed before (cache check).
@@ -71,7 +71,7 @@ options:
 
 ## Disclaimers
 
-* It should work seamlessly on recent MAM books : single file or multi-file book under a single book folder
+* It should work seamlessly on any single file or multi-file book under a single book folder
 * The script may not immediately work on older, multibook collections >> set multibook = true
 * The script may not immediately work on Multi-CD books
 * Hard linking will only work if the source and target paths are on the same volume
@@ -80,7 +80,7 @@ options:
   **Q:  Where is my config file?**
   <p>A: You can copy the default_config.cfg into <somefile>.json.  Modify or add the values of paths: [{file, source_path, media_path}]</p>
 
-  **Q:  My files are not from MAM, can I still use this tool?**
+  **Q:  My files are from other sources, can I still use this tool?**
   <p>A: Use audible as metadata source, Config/metadata = audible</p>
 
   **Q:  What if the mam or audible search returns multiple matches?**
