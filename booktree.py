@@ -152,7 +152,7 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
     multibook = bool(cfg.get("Config/flags/multibook"))
     verbose = bool(cfg.get("Config/flags/verbose"))
     no_cache = bool(cfg.get("Config/flags/no_cache"))
-    last_scan = cfg.get("Config/last_scan")
+    last_scan = cfg.get("Config/last_scan", "")
     last_run = 0
 
     #if last_scan exists, get the gmtime
