@@ -456,6 +456,8 @@ class MAMBook:
         fixid3 = bool(cfg.get("Config/flags/fixid3"))
         verbose = bool(cfg.get("Config/flags/verbose"))
         add_narrators = bool(cfg.get("Config/flags/add_narrators"))
+        interactive = bool(cfg.get("Config/flags/interactive", 0))
+
         fuzzy_match = cfg.get("Config/fuzzy_match")
 
         books=[]
@@ -508,9 +510,9 @@ class MAMBook:
                     break
                 
             #too constraining?  try just a keywords search with all information
-            if ((books is None) or ((books is not None) and (len(books) == 0))):
-                #print (f"Nothing was found so just doing a keyword search {keywords}")
-                books=myx_audible.getAudibleBook (client, cfg, keywords=keywords, language=language)
+            # if ((books is None) or ((books is not None) and (len(books) == 0))):
+            #     #print (f"Nothing was found so just doing a keyword search {keywords}")
+            #     books=myx_audible.getAudibleBook (client, cfg, keywords=keywords, language=language)
 
             mamBook = '|'.join([f"Duration:{self.getRunTimeLength()}min", book.getAuthors(), book.getCleanTitle(), series])
             if add_narrators:
@@ -522,35 +524,64 @@ class MAMBook:
                 if (verbose):
                     print(f"Found {len(self.audibleMatches)} Audible match(es)\n\n")
 
-                bestMatchRate=0
-                #find the best match
-                print(f"Finding the best Audible match out of {len(books)} results")
-                for product in books:
-                    abook=myx_audible.product2Book(product)
-                    #the author is known, check if this book is this authors book
-                    #otherwise, if maybe this title is close enough
-                    #print (f"{abook.title} by {abook.authors}...")
-                    if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook, cfg):
-                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        if add_narrators:
-                            audibleBook = '|'.join([audibleBook, abook.getNarrators()])
-                    elif myx_utilities.isThisMyBookTitle(title, abook, cfg): 
-                        audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        if add_narrators:
-                            audibleBook = '|'.join([audibleBook, abook.getNarrators()])
-                    else:
-                        print (f"This book doesn't have a matching title or author, checking the next book...")
-                        continue        
+                if interactive:
+                    #display choices to user to pick from
+                    count = len(books)
+                    if (count == 1):
+                        self.bestAudibleMatch=myx_audible.product2Book(books[0])
+                        found=True
+                    elif (count > 1):
+                        booksFound=[]
+                        choices=[]
+                        for product in books:
+                            abook = myx_audible.product2Book(product)
+                            booksFound.append(abook)
 
-                    #include this book in the comparison
-                    matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
-                    abook.matchRate=matchRate[fuzzy_match]
+                            #display
+                            print(f"[{len(booksFound)}] {abook.title}({abook.releaseDate}) by {abook.getAuthors()}, ASIN: {abook.asin}, Language: {abook.language}")
+                            choices.append (len(booksFound))
 
-                    print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}\n")
-                    
-                    if (matchRate[fuzzy_match] > bestMatchRate) and (matchRate[fuzzy_match] >= minMatchRate):
-                        bestMatchRate=matchRate[fuzzy_match]
-                        self.bestAudibleMatch=abook
+                        #add none
+                        print(f"[0] None of the above")                            
+                        choices.append (0)
+
+                        choice = myx_utilities.promptChoice (f"Pick a match [0-{len(booksFound)}]:  ", choices)
+                        if choice == 0:
+                            self.bestAudibleMatch = None
+                        else:
+                            if verbose: print(f"You've selected [{choice}] {booksFound[choice-1].title}({booksFound[choice-1].releaseDate}) by {booksFound[choice-1].getAuthors()}, ASIN: {booksFound[choice-1].asin}, Language: {booksFound[choice-1].language}")
+                            self.bestAudibleMatch=booksFound[choice-1]
+
+                else:
+                    bestMatchRate=0
+                    #find the best match
+                    print(f"Finding the best Audible match out of {len(books)} results")
+                    for product in books:
+                        abook=myx_audible.product2Book(product)
+                        #the author is known, check if this book is this authors book
+                        #otherwise, if maybe this title is close enough
+                        #print (f"{abook.title} by {abook.authors}...")
+                        if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook, cfg):
+                            audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                            if add_narrators:
+                                audibleBook = '|'.join([audibleBook, abook.getNarrators()])
+                        elif myx_utilities.isThisMyBookTitle(title, abook, cfg): 
+                            audibleBook = '|'.join([f"Duration:{abook.length}min", abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                            if add_narrators:
+                                audibleBook = '|'.join([audibleBook, abook.getNarrators()])
+                        else:
+                            print (f"This book doesn't have a matching title or author, checking the next book...")
+                            continue        
+
+                        #include this book in the comparison
+                        matchRate=myx_utilities.fuzzymatch(mamBook, audibleBook)
+                        abook.matchRate=matchRate[fuzzy_match]
+
+                        print(f"\tMatch Rate: {matchRate}\n\tSearch: {mamBook}\n\tResult: {audibleBook}\n\tBest Match Rate: {bestMatchRate}\n")
+                        
+                        if (matchRate[fuzzy_match] > bestMatchRate) and (matchRate[fuzzy_match] >= minMatchRate):
+                            bestMatchRate=matchRate[fuzzy_match]
+                            self.bestAudibleMatch=abook
         #end if
 
         #pprint(self.bestAudibleMatch)
@@ -665,6 +696,7 @@ class MAMBook:
         verbose = bool(cfg.get("Config/flags/verbose"))
         ebooks = bool(cfg.get("Config/flags/ebooks"))
         add_narrators = bool(cfg.get("Config/flags/add_narrators"))
+        interactive = bool(cfg.get("Config/flags/interactive", 0))
         fuzzy_match = cfg.get("Config/fuzzy_match")
 
         #search MAM record for this book
@@ -691,38 +723,66 @@ class MAMBook:
             if (verbose):
                 print(f"Found {len(self.mamMatches)} MAM match(es)\n\n")
 
-            bestMatchRate=0
-            #find the best match
-            print(f"Finding the best MAM match out of {len(books)} results")
-            targetBook = '|'.join([self.ffprobeBook.title, self.ffprobeBook.getAuthors(), self.ffprobeBook.getSeriesParts()])
-    
-            for abook in books:
-                #if this book is snatched, include in the match
-                if abook.snatched:
-                    #the author is known, check if this book is this authors book
-                    #otherwise, if maybe this title is close enough
-                    #print (f"{abook.title} by {abook.authors}...")
-                    if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook, cfg):
-                        mamBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        if add_narrators:
-                            mamBook = '|'.join([mamBook, abook.getNarrators()])
-                    elif myx_utilities.isThisMyBookTitle(title, abook, cfg): 
-                        mamBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
-                        if add_narrators:
-                            mamBook = '|'.join([mamBook, abook.getNarrators()])
-                    else:
-                        print (f"This book doesn't have a matching title or author, checking the next book...")
-                        continue        
+                if interactive:
+                    #display choices to user to pick from
+                    count = len(books)
+                    if (count == 1):
+                        self.bestMAMMatch=books[0]
+                        
+                    elif (count > 1):
+                        booksFound=[]
+                        choices=[]
+                        for abook in books:
+                            booksFound.append(abook)
 
-                    #include this book in the comparison
-                    matchRate=myx_utilities.fuzzymatch(targetBook, mamBook)
-                    abook.matchRate=matchRate[fuzzy_match]
+                            #display
+                            print(f"[{len(booksFound)}] {abook.title}({abook.releaseDate}) by {abook.getAuthors()}, ASIN: {abook.asin}, Language: {abook.language}")
+                            choices.append (len(booksFound))
+                        
+                        #add none
+                        print(f"[0] None of the above")                            
+                        choices.append (0)
 
-                    print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetBook}\n\tResult: {mamBook}\n\tBest Match Rate: {bestMatchRate}\n")
-                    
-                    if (matchRate[fuzzy_match] > bestMatchRate):
-                        bestMatchRate=matchRate[fuzzy_match]
-                        self.bestMAMMatch=abook
+                        choice = myx_utilities.promptChoice (f"Pick a match [0-{len(booksFound)}]:  ", choices)
+                        if choice != 0:
+                            if verbose: print(f"You've selected [{choice}] {booksFound[choice-1].title}({booksFound[choice-1].releaseDate}) by {booksFound[choice-1].getAuthors()}, ASIN: {booksFound[choice-1].asin}, Language: {booksFound[choice-1].language}")
+                            self.bestMAMMatch=booksFound[choice-1]
+                        else:
+                            self.bestMAMMatch=None
+
+                else:
+                    bestMatchRate=0
+                    #find the best match
+                    print(f"Finding the best MAM match out of {len(books)} results")
+                    targetBook = '|'.join([self.ffprobeBook.title, self.ffprobeBook.getAuthors(), self.ffprobeBook.getSeriesParts()])
+            
+                    for abook in books:
+                        #if this book is snatched, include in the match
+                        if abook.snatched:
+                            #the author is known, check if this book is this authors book
+                            #otherwise, if maybe this title is close enough
+                            #print (f"{abook.title} by {abook.authors}...")
+                            if len(book.authors) and myx_utilities.isThisMyAuthorsBook(book.authors, abook, cfg):
+                                mamBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                                if add_narrators:
+                                    mamBook = '|'.join([mamBook, abook.getNarrators()])
+                            elif myx_utilities.isThisMyBookTitle(title, abook, cfg): 
+                                mamBook = '|'.join([abook.getAuthors(), abook.getCleanTitle(), abook.getSeriesParts()])
+                                if add_narrators:
+                                    mamBook = '|'.join([mamBook, abook.getNarrators()])
+                            else:
+                                print (f"This book doesn't have a matching title or author, checking the next book...")
+                                continue        
+
+                            #include this book in the comparison
+                            matchRate=myx_utilities.fuzzymatch(targetBook, mamBook)
+                            abook.matchRate=matchRate[fuzzy_match]
+
+                            print(f"\tMatch Rate: {matchRate}\n\tSearch: {targetBook}\n\tResult: {mamBook}\n\tBest Match Rate: {bestMatchRate}\n")
+                            
+                            if (matchRate[fuzzy_match] > bestMatchRate):
+                                bestMatchRate=matchRate[fuzzy_match]
+                                self.bestMAMMatch=abook
         else:
             #no metadata, get the first match?
             if len(self.mamMatches):

@@ -571,3 +571,15 @@ def getCachePath(cfg):
     os.makedirs(os.path.join(cache_path, "__cache__", "mylib"), exist_ok=True)
 
     return cache_path
+
+def promptChoice (prompt, choices):
+    while True:
+        try:
+            choice = int (input (f"{prompt}"))
+            if choice in choices:
+                return choice
+            else:
+                print ("Invalid choice, try again.")
+        except ValueError:
+            print ("This is not a valid choice.")
+    

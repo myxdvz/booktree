@@ -54,9 +54,10 @@ def getAudibleBook(client, cfg, asin="", title="", authors="", narrators="", key
         enBooks.append(books["product"])
     elif "products" in books.keys():
         for book in books["products"]:
-            #ignore non-english books
-            if ("language" in book) and (book["language"] == language):
-                enBooks.append(book)
+            if ("content_type") in book and (book["content_type"] != "Podcast"):
+                #ignore non-english books and ignore podcasts
+                if ("language" in book) and (book["language"] == language):
+                    enBooks.append(book)
 
     return enBooks
 
