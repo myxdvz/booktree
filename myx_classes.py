@@ -1,7 +1,7 @@
 
 from dataclasses import dataclass
 from dataclasses import field
-import os, sys, subprocess, shlex, re
+import os, sys, subprocess, shlex, re, shutil
 from pprint import pprint
 import json
 import posixpath
@@ -276,6 +276,28 @@ class BookFile:
                 
         return self.isHardlinked
     
+    def copyFile(self, source, target):
+
+        #check if the target path exists
+        if (not os.path.exists(target)):
+            #make dir path
+            print (f"\tCreating target directory: {target} ")
+            os.makedirs(target, exist_ok=True)
+        
+        #check if the file already exists in the target directory
+        filename=os.path.join(target, sanitize_filename(os.path.basename(source).split(os.sep)[-1]))
+        if (not os.path.exists(filename)):
+            try:
+                #print (f"Copying {source} to {filename}")
+                shutil.copy2 (source, filename)                  
+                self.isHardlinked=True
+            except Exception as e:
+                print (f"\tFailed due to {e}")
+        else:
+            print (f"\tSkipped : {filename} exists")
+                
+        return self.isHardlinked
+
     def getConfigTargetPath(self, cfg, book):
         #Config
         media_path = self.mediaPath
@@ -469,6 +491,12 @@ class MAMBook:
                 
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
+            #Get Authors
+            authors=book.getAuthors(delimiter="|", encloser='"', stripaccents=False)
+
+            #Get Narrators
+            narrators=book.getNarrators(delimiter="|", encloser='"', stripaccents=False)
+
             #sometimes Audible returns nothing if there's too much info in the keywords
             series=""
             if (len(book.series)==1):
@@ -489,25 +517,29 @@ class MAMBook:
             #print(f"Searching Audible for\n\tasin:{book.asin}\n\ttitle:{title}\n\tauthors:{book.authors}\n\tnarrators:{book.narrators}\n\tkeywords:{keywords}")
             
             #generate author, narrator combo
-            author_narrator=[]
-            for i in range(len(book.authors)):
-                if add_narrators and len(book.narrators):
-                    for j in range(len(book.narrators)):
-                        author_narrator.append((book.authors[i].name, book.narrators[j].name))
-                else:
-                        author_narrator.append((book.authors[i].name, ""))
+            # author_narrator=[]
+            # for i in range(len(book.authors)):
+            #     if add_narrators and len(book.narrators):
+            #         for j in range(len(book.narrators)):
+            #             author_narrator.append((book.authors[i].name, book.narrators[j].name))
+            #     else:
+            #             author_narrator.append((book.authors[i].name, ""))
 
             #print (author_narrator)
 
-            for an in author_narrator:
-                #print (f"Author: {an[0]}\tNarrator: {an[1]}")
-                sAuthor=myx_utilities.cleanseAuthor(an[0])
-                sNarrator=myx_utilities.cleanseAuthor(an[1])
-                books=myx_audible.getAudibleBook (client, cfg, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords, language=language)
+            # for an in author_narrator:
+            #     #print (f"Author: {an[0]}\tNarrator: {an[1]}")
+            #     sAuthor=myx_utilities.cleanseAuthor(an[0])
+            #     sNarrator=myx_utilities.cleanseAuthor(an[1])
+            #     books=myx_audible.getAudibleBook (client, cfg, asin=book.asin, title=title, authors=sAuthor, narrators=sNarrator, keywords=keywords, language=language)
 
-                #book found, exit for loop
-                if ((books is not None) and len(books)):
-                    break
+            #     #book found, exit for loop
+            #     if ((books is not None) and len(books)):
+            #         break
+            if add_narrators:
+                books=myx_audible.getAudibleBook (client, cfg, asin=book.asin, title=title, authors=authors, narrators=narrators, keywords=keywords, language=language)
+            else:
+                books=myx_audible.getAudibleBook (client, cfg, asin=book.asin, title=title, authors=authors, keywords=keywords, language=language)
                 
             #too constraining?  try just a keywords search with all information
             # if ((books is None) or ((books is not None) and (len(books) == 0))):
@@ -531,6 +563,8 @@ class MAMBook:
                         self.bestAudibleMatch=myx_audible.product2Book(books[0])
                         found=True
                     elif (count > 1):
+                        #There are multiple options, ask the user to pick one
+                        #print (f"Pick the best match for {book.getCleanTitle()}, Duration: {myx_utilities.getDuration(self.getRunTimeLength())}, Narrators: {book.getNarrators()}")
                         booksFound=[]
                         choices=[]
                         for product in books:
@@ -538,7 +572,7 @@ class MAMBook:
                             booksFound.append(abook)
 
                             #display
-                            print(f"[{len(booksFound)}] {abook.title}({abook.releaseDate}) by {abook.getAuthors()}, ASIN: {abook.asin}, Language: {abook.language}")
+                            print(f"[{len(booksFound)}] {abook.title}({abook.releaseDate}) by {abook.getAuthors()}/{abook.getNarrators()}, Duration: {myx_utilities.getDuration(abook.length)}, Language: {abook.language}, https://www.audible.com/pd/{abook.asin}")
                             choices.append (len(booksFound))
 
                         #add none
@@ -596,6 +630,8 @@ class MAMBook:
         dryRun = bool (cfg.get("Config/flags/dry_run"))
         verbose = bool (cfg.get("Config/flags/verbose"))
         no_opf = bool (cfg.get("Config/flags/no_opf"))
+        hardlink = bool (cfg.get("Config/flags/hardlink", True))
+
         metadata = cfg.get("Config/metadata")
 
         if (self.metadata == "audible"):
@@ -621,12 +657,19 @@ class MAMBook:
                 if (len(p) == 0):
                     p = f.getConfigTargetPath(cfg, self.metadataBook)
 
-                print (f"{prefix}Hardlinking files for {self.metadataBook.title}")
+                if hardlink:
+                    print (f"{prefix}Hardlinking files for {self.metadataBook.title}")
+                else:
+                    print (f"{prefix}Copying files for {self.metadataBook.title}")
                 print (f"\t\t\tfrom {f.fullPath}\n\t\t\t  to {p}")
 
                 if (not dryRun):
-                    #hardlink the file
-                    f.hardlinkFile(f.fullPath, p)                   
+                    if hardlink:
+                        #hardlink the file
+                        f.hardlinkFile(f.fullPath, p)                   
+                    else:
+                        #copy the file
+                        f.copyFile(f.fullPath, p)
 
                     #generate the OPF file
                     print (f"\tGenerating OPF file ...")

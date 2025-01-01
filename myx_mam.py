@@ -46,52 +46,55 @@ def searchMAM(cfg, titleFilename, authors, extension):
             sess.headers.update({"cookie": f"mam_id={session}"})
 
         #test session and cookie
-        r = sess.get('https://www.myanonamouse.net/jsonLoad.php', timeout=5)  # test cookie
-        if r.status_code != 200:
-            raise Exception(f'Error communicating with API. status code {r.status_code} {r.text}')
-        else:
-            # save cookies for later
-            with open(cookies_filepath, 'wb') as f:
-                pickle.dump(sess.cookies, f)
+        try:
+            r = sess.get('https://www.myanonamouse.net/jsonLoad.php', timeout=5)  # test cookie
+            if r.status_code != 200:
+                raise Exception(f'Error communicating with API. status code {r.status_code} {r.text}')
+            else:
+                # save cookies for later
+                with open(cookies_filepath, 'wb') as f:
+                    pickle.dump(sess.cookies, f)
 
-            mam_categories = []
-            if audiobook:
-                mam_categories.append(13) #audiobooks
-                mam_categories.append(16) #radio
-            if ebook:
-                mam_categories.append(14)
-            if not mam_categories:
-                return None
-            
-            params = {
-                "tor": {
-                    "text": search,  # The search string.
-                    "srchIn": {
-                        "title": "true",
-                        "author": "true",
-                        "fileTypes": "true",
-                        "filenames": "true"
-                    },
-                    "main_cat": mam_categories
-                },
-                "perpage":50
-            }
-
-            try:
-                r = sess.post('https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php', json=params)
-                if r.text == '{"error":"Nothing returned, out of 0"}':
+                mam_categories = []
+                if audiobook:
+                    mam_categories.append(13) #audiobooks
+                    mam_categories.append(16) #radio
+                if ebook:
+                    mam_categories.append(14)
+                if not mam_categories:
                     return None
+                
+                params = {
+                    "tor": {
+                        "text": search,  # The search string.
+                        "srchIn": {
+                            "title": "true",
+                            "author": "true",
+                            "fileTypes": "true",
+                            "filenames": "true"
+                        },
+                        "main_cat": mam_categories
+                    },
+                    "perpage":50
+                }
 
-                results = r.json()
+                try:
+                    r = sess.post('https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php', json=params)
+                    if r.text == '{"error":"Nothing returned, out of 0"}':
+                        return None
 
-                #cache this result before returning it
-                myx_utilities.cacheMe(cacheKey, "mam", results, cfg)
+                    results = r.json()
 
-                return (results["data"])
-        
-            except Exception as e:
-                print(f'error searching MAM {e}')
+                    #cache this result before returning it
+                    myx_utilities.cacheMe(cacheKey, "mam", results, cfg)
 
+                    return (results["data"])
+            
+                except Exception as e:
+                    print(f'error searching MAM {e}')
+        except Exception as e:
+            print(f'error searching MAM {e}')
+            
     return None
 
 def getMAMBook(cfg, titleFilename="", authors="", extension=""):

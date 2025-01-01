@@ -582,4 +582,16 @@ def promptChoice (prompt, choices):
                 print ("Invalid choice, try again.")
         except ValueError:
             print ("This is not a valid choice.")
-    
+
+def getDuration (minutes):
+    hours = minutes // 60
+    minutes = minutes % 60
+
+    duration = ""
+    if hours > 0:
+        duration = f"{hours} hours "
+
+    if minutes > 0:
+        duration += f"{minutes} minutes"
+
+    return duration
