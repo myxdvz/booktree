@@ -25,7 +25,9 @@ A copy of default_config.cfg can be found under the /templates folder.  It is re
             "no_opf": 0,
             "no_cache": 0,
             "fixid3": 0,
-            "add_narrators": 0 
+            "add_narrators": 0,
+            "interactive": 1,
+            "hardlink": 1 
         },
         "target_path": {
             "multi_author": "first_author",
@@ -64,6 +66,8 @@ A copy of default_config.cfg can be found under the /templates folder.  It is re
 | | no_cache            | --no-cache, If true, processes the files even if they've been processed before | 0    |
 | | fixid3              | --fixid3, If true, overrides and fixes the id3 title data | 0    |
 | | add_narrators       | --add-narrators, If true, includes the narrators in the Audible search | 1   |
+| | interactive         | --interactive, If true, prompts user to choose if search returns multiple rows | 0   |
+| | hardlink            | --hardlink, If true, creates hardlinks. If false, creates copy | 1   |
 | target_path  |        | |     |
 | | multi_author        | How to handle the Author folder for multi-author books: first_author, authors, "", "Static folder name" | first_author   |
 | | in_series           | Format of the generated tree for books in a series | {author}/{series}/{series} #{part} - {title}   |
