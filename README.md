@@ -68,13 +68,14 @@ options:
 
 1. run pip install -r requirements.txt to install dependencies
 2. copy default_config.cfg into config.json and modify with your paths settings (files, source_path, media_path)
+3. if using MAM as a source, create a MAM session ID and set the value in config.json file (/Config/session)
 
 ## Disclaimers
 
 * It should work seamlessly on any single file or multi-file book under a single book folder
 * The script may not immediately work on older, multibook collections >> set multibook = true
 * The script may not immediately work on Multi-CD books
-* Hard linking will only work if the source and target paths are on the same volume
+* Hard linking will only work if the source and target paths are on the same volume.  If you are using Unraid, same datasets
 
 ## FAQ
   **Q:  Where is my config file?**
