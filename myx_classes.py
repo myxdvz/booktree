@@ -631,6 +631,8 @@ class MAMBook:
         verbose = bool (cfg.get("Config/flags/verbose"))
         no_opf = bool (cfg.get("Config/flags/no_opf"))
         hardlink = bool (cfg.get("Config/flags/hardlink", True))
+        add2calibre = bool (cfg.get("Config/flags/ingest_calibre", False))
+        calibre_path = cfg.get("Config/target_path/calibre_ingest_path", "")
 
         metadata = cfg.get("Config/metadata")
 
@@ -670,6 +672,11 @@ class MAMBook:
                     else:
                         #copy the file
                         f.copyFile(f.fullPath, p)
+
+                    #setup Calibre Ingestion Path
+                    if ((add2calibre) and len(calibre_path) > 0):
+                        #hardlink the file
+                        f.hardlinkFile(f.fullPath, calibre_path)                   
 
                     #generate the OPF file
                     print (f"\tGenerating OPF file ...")
