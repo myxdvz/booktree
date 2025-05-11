@@ -135,8 +135,10 @@ def getMAMBook(cfg, titleFilename="", authors="", extension=""):
                     series_info = json.loads(b["series_info"])
                     for series in series_info.values():
                         s=list(series)
-                        book.series.append(myx_classes.Series(str(s[0]), s[1]))    
-            if 'lang_code' in b: 
+                        seriesName = str(s[0])
+                        seriesName = seriesName.replace("&#039;", "'")
+                        book.series.append(myx_classes.Series(seriesName, s[1]))
+            if 'lang_code' in b:
                 book.language=myx_utilities.getLanguage((b["lang_code"]))
             if 'my_snatched' in b:
                 book.snatched=bool((b["my_snatched"])) 
