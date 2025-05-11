@@ -86,7 +86,15 @@ def searchMAM(cfg, titleFilename, authors, extension):
                     results = r.json()
 
                     #cache this result before returning it
-                    myx_utilities.cacheMe(cacheKey, "mam", results, cfg)
+                    if not results["data"] is None and len((results["data"])) > 0:
+                        cacheResults = False
+                        #parent calls filter to snatched for matching, so check that the result has at least one snatched
+                        for book in results["data"]:
+                            if not book['my_snatched'] is None and bool(book['my_snatched']):
+                                cacheResults = True
+
+                        if cacheResults:
+                            myx_utilities.cacheMe(cacheKey, "mam", results, cfg)
 
                     return (results["data"])
             
