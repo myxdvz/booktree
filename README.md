@@ -16,34 +16,10 @@ It does the following:
 The above format is the default. User can modify/tweak this in the config file.  See [Config File Documentation](CONFIG.md)
 
 ## Usage:
-
-### Recommended Workflow
-
-1. Start small (pick a folder that has a handful of books, don't run it on 2K files the first try :) )
-2. Run <mark>booktree</mark> in <mark>--dry-run</mark> mode
-3. Check the resulting log file to check the matches.  What you should check for:
-    * Rows where isMatched = TRUE
-      * Anywhere mamCount = 1 is an exact match... celebrate!
-      * Check for rows where mamCount or audibleMatchCount is high (>3), if it is, just check if it picked the right match
-    * Rows where isMatched = FALSE - there are many reasons why there won't be a match
-      *  The book is NOT SOLD on Audible at all (or in your region)
-      *  The book/torrent has been deleted since you snatched it
-      *  The ID3 metadata is empty or bad, e.g., Author/Narrator that's not comma delimited, bad title and series information
-4.  If everything looks good, rerun booktree without the --dry-run parameter
-5.  Recategorize/Set Location (in you client, e.g., Qbit), to where you have your "processed" files to optimize performance. It's ok if you don't, the script will add them to the list of files to be processed, but will skip processing them if they have already been processed before (cache check).
-
-  Optionally, you can choose to work on the log file, and feed that as input to booktree in a succeeding run:
-
-1. Fix the <mark>paths</mark> column to edit/change the generated target path.  When isMatched=TRUE, booktree will just use the paths value as-is
-2. If isMatched = FALSE, you can fix the id3-metadata to re-do the search.  The areas to focus on are:
-    *  id3-asin
-    *  id3-title
-    *  id3-author
-    *  id3-seriesparts
-3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log /config/log_config.json. I recommend having a separate log_config.json file for this 
-
 ### Help
 ~~~
+to run in the docker container, run: > docker exec [-it] <<container_name>> /venv/bin/python booktree.py /config/<<config>>.json 
+
 usage: booktree [-h] [--dry-run] config_file
 
 Reorganize your audiobooks using ID3 or Audbile metadata. The originals are untouched and will be hardlinked to their
@@ -69,6 +45,31 @@ options:
 1. run pip install -r requirements.txt to install dependencies
 2. copy default_config.cfg into config.json and modify with your paths settings (files, source_path, media_path)
 3. if using MAM as a source, create a MAM session ID and set the value in config.json file (/Config/session)
+
+### Recommended Workflow
+
+1. Start small (pick a folder that has a handful of books, don't run it on 2K files the first try :) )
+2. Run <mark>booktree</mark> in <mark>--dry-run</mark> mode
+3. Check the resulting log file to check the matches.  What you should check for:
+    * Rows where isMatched = TRUE
+      * Anywhere mamCount = 1 is an exact match... celebrate!
+      * Check for rows where mamCount or audibleMatchCount is high (>3), if it is, just check if it picked the right match
+    * Rows where isMatched = FALSE - there are many reasons why there won't be a match
+      *  The book is NOT SOLD on Audible at all (or in your region)
+      *  The book/torrent has been deleted since you snatched it
+      *  The ID3 metadata is empty or bad, e.g., Author/Narrator that's not comma delimited, bad title and series information
+4.  If everything looks good, rerun booktree without the --dry-run parameter
+5.  Recategorize/Set Location (in you client, e.g., Qbit), to where you have your "processed" files to optimize performance. It's ok if you don't, the script will add them to the list of files to be processed, but will skip processing them if they have already been processed before (cache check).
+
+  Optionally, you can choose to work on the log file, and feed that as input to booktree in a succeeding run:
+
+1. Fix the <mark>paths</mark> column to edit/change the generated target path.  When isMatched=TRUE, booktree will just use the paths value as-is
+2. If isMatched = FALSE, you can fix the id3-metadata to re-do the search.  The areas to focus on are:
+    *  id3-asin
+    *  id3-title
+    *  id3-author
+    *  id3-seriesparts
+3. Rerun booktree using the "log" mode and passing the updated logfile as input, booktree.py log /config/log_config.json. I recommend having a separate log_config.json file for this 
 
 ## Disclaimers
 
