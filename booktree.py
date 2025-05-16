@@ -269,8 +269,8 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
                         book[b].metadata = "audible"
                 else:
                     #This is not a foreign book, do an Audible Search using id3 values first   
-                    #id3BestMatch = book[b].getAudibleBooks(httpx, book[b].ffprobeBook, cfg)
-                    id3BestMatch = None
+                    id3BestMatch = book[b].getAudibleBooks(httpx, book[b].ffprobeBook, cfg)
+                    #id3BestMatch = None
 
                     #if this book is NOT a multibook, try MAM metadata search, if this is a collection, ignore MAM
                     if (not multibook) and (not myx_utilities.isMultiBookCollection(book[b].files[0].file)):
