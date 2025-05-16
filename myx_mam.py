@@ -54,6 +54,7 @@ def searchMAM(cfg, titleFilename, authors, extension):
                 # save cookies for later
                 with open(cookies_filepath, 'wb') as f:
                     pickle.dump(sess.cookies, f)
+                    print (f"Cookie updated...")
 
                 mam_categories = []
                 if audiobook:

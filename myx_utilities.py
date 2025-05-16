@@ -348,13 +348,14 @@ def getHash(key):
 def isCached(key, category, cfg):
     #Config
     verbose = bool(cfg.get("Config/flags/verbose"))
-
+    no_cache = bool(cfg.get("Config/flags/no_cache"))
+    
     if verbose:
         print (f"Checking cache: {category}/{key}...")
     
     #Check if this book's hashkey exists in the cache, if so - it's been processed
     bookFile = os.path.join(getCachePath(cfg), "__cache__", category, key)
-    found = os.path.exists(bookFile)  
+    found = (not no_cache) and os.path.exists(bookFile)  
     return found      
     
 def cacheMe(key, category, content, cfg):
