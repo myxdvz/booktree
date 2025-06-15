@@ -168,7 +168,7 @@ def createHardLinks(bookFiles, targetFolder="", dryRun=False):
 def logBookRecords(logFilePath, bookFiles, cfg):
 
     write_headers = not os.path.exists(logFilePath)
-    with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
+    with open(logFilePath, mode="a", newline="", errors='ignore', encoding='utf-8') as csv_file:
         try:
             for f in bookFiles:
                 #get book records to log
@@ -193,7 +193,7 @@ def logBookRecords(logFilePath, bookFiles, cfg):
 def logBooks(logFilePath, books, cfg):
     if len(books):
         write_headers = not os.path.exists(logFilePath)
-        with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
+        with open(logFilePath, mode="a", newline="", errors='ignore', encoding='utf-8') as csv_file:
             try:
                 fields=getLogHeaders()
                 #pprint (fields)
@@ -214,7 +214,7 @@ def logBooks(logFilePath, books, cfg):
 def logMyLibrary (cfg, logFilePath, books):
     if len(books):
         write_headers = not os.path.exists(logFilePath)
-        with open(logFilePath, mode="a", newline="", errors='ignore') as csv_file:
+        with open(logFilePath, mode="a", newline="", errors='ignore', encoding='utf-8') as csv_file:
             try:
                 fields=getLogHeaders()
                 #pprint (fields)
@@ -279,7 +279,7 @@ def createOPF(book, path):
     try:
         # --- Generate .opf Metadata file ---
         opfTemplate=os.path.join(os.getcwd(), "templates/booktemplate.opf") 
-        with open(opfTemplate, mode='r') as file:
+        with open(opfTemplate, mode='r', encoding='utf-8') as file:
             template = file.read()
 
         # - Author -
@@ -542,7 +542,7 @@ def initMetadataJSON(book, path):
     
     metadataTemplate=os.path.join(os.getcwd(), "templates/metadata.json") 
     if os.path.exists(metadataTemplate):
-        with open(metadataTemplate) as json_file:
+        with open(metadataTemplate, encoding='utf-8') as json_file:
             #Initialize the metadata with the template
             book.metadata = json.loads(json_file.read())
 
