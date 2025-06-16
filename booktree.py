@@ -268,32 +268,40 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
                     if (book[b].bestAudibleMatch is not None):
                         book[b].metadata = "audible"
                 else:
-                    #This is not a foreign book, do an Audible Search using id3 values first   
-                    id3BestMatch = book[b].getAudibleBooks(httpx, book[b].ffprobeBook, cfg)
-                    #id3BestMatch = None
-
-                    #if this book is NOT a multibook, try MAM metadata search, if this is a collection, ignore MAM
-                    if (not multibook) and (not myx_utilities.isMultiBookCollection(book[b].files[0].file)):
+                    if (metadata == "mam-audible") and ((not multibook) and (not myx_utilities.isMultiBookCollection(book[b].files[0].file))):
                         mamBestMatch = book[b].getAudibleBooks(httpx, book[b].bestMAMMatch, cfg)
-
-                        if (id3BestMatch is not None) or (mamBestMatch is not None):
-                            book[b].metadata = "audible" 
-                            #Override mamBest match if id3 has higher match rate, or if MAM didn't match
-                            if (id3BestMatch is not None) and (mamBestMatch is not None):
-                                #A match was found using either metadata
-                                if id3BestMatch.matchRate > mamBestMatch.matchRate:
-                                    #Replace bestAudibleMatch with the better matchrate
-                                    book[b].bestAudibleMatch = id3BestMatch
-                                else:
-                                    book[b].bestAudibleMatch = mamBestMatch
-                            elif (id3BestMatch is not None) and (mamBestMatch is None):
-                                #Replace bestAudibleMatch with the better matchrate
-                                book[b].bestAudibleMatch = id3BestMatch
                     else:
-                        #this is multibook so audible only
-                        if id3BestMatch is not None:
-                            book[b].metadata = "audible" 
+                        #This is not a foreign book, do an Audible Search using id3 values first   
+                        id3BestMatch = book[b].getAudibleBooks(httpx, book[b].ffprobeBook, cfg)
 
+                    if (mamBestMatch is not None) or (id3BestMatch is not None):
+                        book[b].metadata = "audible" 
+                                
+                    #if this book is NOT a multibook, try MAM metadata search, if this is a collection, ignore MAM
+                    # if (not multibook) and (not myx_utilities.isMultiBookCollection(book[b].files[0].file)):
+                    #     if (id3BestMatch is None):
+                    #         #A match was not found, so try and perform a match based on MAM metadata
+                    #         mamBestMatch = book[b].getAudibleBooks(httpx, book[b].bestMAMMatch, cfg)
+
+                    #         if (mamBestMatch is not None):
+                    #             book[b].metadata = "audible" 
+                    #             # #Override mamBest match if id3 has higher match rate, or if MAM didn't match
+                    #             # if (id3BestMatch is not None) and (mamBestMatch is not None):
+                    #             #     #A match was found using either metadata
+                    #             #     if id3BestMatch.matchRate > mamBestMatch.matchRate:
+                    #             #         #Replace bestAudibleMatch with the better matchrate
+                    #             #         book[b].bestAudibleMatch = id3BestMatch
+                    #             #     else:
+                    #             #         book[b].bestAudibleMatch = mamBestMatch
+                    #             # elif (id3BestMatch is not None) and (mamBestMatch is None):
+                    #             #     #Replace bestAudibleMatch with the better matchrate
+                    #             #     book[b].bestAudibleMatch = id3BestMatch
+                    #     else:
+                    #         book[b].metadata = "audible" 
+                    # else:
+                    #     #this is multibook so audible only
+                    #     if id3BestMatch is not None:
+                    #         book[b].metadata = "audible" 
 
             print (f"Found {len(book[b].mamMatches)} MAM matches, {len(book[b].audibleMatches)} Audible Matches")
             myx_utilities.printDivider()
