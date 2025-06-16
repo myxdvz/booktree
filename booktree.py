@@ -376,6 +376,17 @@ if __name__ == "__main__":
             except Exception as e:
                 raise Exception(f"\nThere was a problem reading your config file {myx_args.params.config_file}: {e}\n")
             
+            #check metadata source
+            metadata = cfg.get("Config/metadata")
+
+            if ("mam" in metadata):
+                #check the cookie
+                print ("Checking MAM cookie")
+                if not myx_mam.checkMAMCookie(cfg):
+                    #display error
+                    print (f"Your MAM cookie is not valid... please check your session and rerun booktree")
+                    return
+
             #start the program
             main(cfg)
 

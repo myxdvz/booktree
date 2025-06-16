@@ -148,3 +148,64 @@ def getMAMBook(cfg, titleFilename="", authors="", extension=""):
                 books.append(book)
 
     return books
+
+def testSessionCookie(mySession):
+    isSessionCookieValid = False
+
+    #test session and cookie
+    #print (f"Cookie: {mySession}")
+    try:
+        #Hit cookieCheck API, https://www.myanonamouse.net/json/checkCookie.php
+        r = mySession.get('https://www.myanonamouse.net/json/checkCookie.php', timeout=5)  # test cookie    
+
+        if r.status_code != 200:
+            print(f'Error communicating with API. status code {r.status_code} {r.text}')
+        else:
+            print (f"Successfully checked cookie: {r.text}")
+            isSessionCookieValid = True
+
+    except Exception as e:
+        print(f'Checking MAM Cookie {e}')
+
+    return isSessionCookieValid
+
+def checkMAMCookie(cfg):
+    #Config
+    session = cfg.get("Config/session")
+    log_path = cfg.get("Config/log_path")
+
+    isCookieValid = False
+    useConfigSession = False
+    cookies_filepath = os.path.join(log_path, 'cookies.pkl')
+    sess = requests.Session()
+
+    #Check if a cookie file exists
+    if os.path.exists(cookies_filepath):
+        print (f"Checking if current cookie file is still valid...")
+        #If it does, create a session, using this cookie
+        cookies = pickle.load(open(cookies_filepath, 'rb'))
+        sess.cookies = cookies
+        isCookieValid = testSessionCookie (sess)
+
+        #if the session cookie is NOT Valid
+        if (not isCookieValid):
+            #delete the file
+            #os.remove(cookies_filepath)
+            
+            print (f"Found an existing cookie file, but it was invalid. Checking session ID from config...")
+            useConfigSession = True
+    else:
+        #Cookie File not found, use the session ID from Config
+        print (f"Cookie file not found, checking session ID from config...")
+        useConfigSession = True
+
+    if (useConfigSession):
+        if (session is not None) and len(session):
+            sess.headers.update({"cookie": f"mam_id={session}"})
+            isCookieValid = testSessionCookie (sess)
+
+        else:
+            print (f"No session ID found in the config... Please go to MAM Preferences > Security to create a new session")
+        
+
+    return isCookieValid
