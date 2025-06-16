@@ -190,7 +190,7 @@ def checkMAMCookie(cfg):
         #if the session cookie is NOT Valid
         if (not isCookieValid):
             #delete the file
-            #os.remove(cookies_filepath)
+            os.remove(cookies_filepath)
             
             print (f"Found an existing cookie file, but it was invalid. Checking session ID from config...")
             useConfigSession = True
