@@ -268,6 +268,8 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
                     if (book[b].bestAudibleMatch is not None):
                         book[b].metadata = "audible"
                 else:
+                    id3BestMatch = None
+                    mamBestMatch = None
                     if (metadata == "mam-audible") and ((not multibook) and (not myx_utilities.isMultiBookCollection(book[b].files[0].file))):
                         mamBestMatch = book[b].getAudibleBooks(httpx, book[b].bestMAMMatch, cfg)
                     else:
