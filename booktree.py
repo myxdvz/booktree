@@ -384,8 +384,7 @@ if __name__ == "__main__":
                 print ("Checking MAM cookie")
                 if not myx_mam.checkMAMCookie(cfg):
                     #display error
-                    print (f"Your MAM cookie is not valid... please check your session and rerun booktree")
-                    return
+                    raise Exception (f"Your MAM cookie is not valid... please check your session and rerun booktree")
 
             #start the program
             main(cfg)
