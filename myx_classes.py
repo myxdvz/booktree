@@ -488,7 +488,7 @@ class MAMBook:
             # book = self.ffprobeBook
             if (len(book.title) == 0) or (fixid3):
                 book.title = myx_utilities.getAltTitle (self.name, book, cfg) 
-                
+            
             title = myx_utilities.cleanseTitle(book.title, stripUnabridged=True)
 
             #Get Authors

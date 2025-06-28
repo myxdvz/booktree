@@ -261,7 +261,7 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
                     isForeignBook = (book[b].bestMAMMatch.language.lower() !=  "english")
             
             #Audible search only if this is not ebooks/multibook and metadatasource includes audible, otherwise MAM search is enough
-            if (not ebooks) and ((metadata == "audible") or (metadata == "mam-audible")):
+            if (not ebooks) and ('audible' in metadata):
                 if isForeignBook:
                     #if bestMAMMatch is a foreign book, getAudible using MAM Metadata
                     book[b].getAudibleBooks(httpx, book[b].bestMAMMatch, cfg)
