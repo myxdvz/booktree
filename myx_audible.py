@@ -10,7 +10,7 @@ def getAudibleBook(client, cfg, asin="", title="", authors="", narrators="", key
 
     # if metadata is libby, title is PartX, don't use it
     metadata = cfg.get("Config/metadata")
-    if ('libby' in metadata):
+    if ('libby' in metadata) and (title[:5] == 'Part '):
         title = ""
     
     enBooks=[]

@@ -183,7 +183,7 @@ def buildTreeFromHybridSources(path, mediaPath, files, logfile, cfg):
         fullpath = os.path.join(path, f)
         if os.path.getmtime(fullpath) > last_run:        
             #for each book file
-            print(f"Categorizing: {f}")
+            #print(f"Categorizing: {f}")
 
             #create a bookFile
             bf=myx_classes.BookFile(f, fullpath, path, mediaPath)

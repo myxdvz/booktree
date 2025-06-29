@@ -312,10 +312,10 @@ class BookFile:
                 author="Unknown"
             elif ((book.authors is not None) and (len(book.authors) > 1) and (multi_author is not None)):
                     match multi_author:
-                        case "first_author": 
+                        case "{first_author}": 
                             author=book.authors[0].name  
                         
-                        case "authors":
+                        case "{authors}":
                             author=book.getAuthors()
 
                         case _: 
