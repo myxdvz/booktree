@@ -132,7 +132,7 @@ def getMAMBook(cfg, titleFilename="", authors="", extension=""):
                         book.narrators.append(myx_classes.Contributor(str(narrator)))
             if 'series_info'in b:
                 #format {"35598": ["Kat Dubois", "5"]}
-                if len(b["series_info"]):
+                if ((not b["series_info"] is None) and len(b["series_info"])):
                     series_info = json.loads(b["series_info"])
                     for series in series_info.values():
                         s=list(series)
