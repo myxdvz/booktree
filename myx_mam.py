@@ -126,7 +126,7 @@ def getMAMBook(cfg, titleFilename="", authors="", extension=""):
                         book.authors.append(myx_classes.Contributor(str(author)))
             if 'narrator_info'in b:
                 #format {id:narrator, id:narrator}
-                if len(b["narrator_info"]):
+                if ((not b["narrator_info"] is None) and len(b["narrator_info"])):
                     narrators = json.loads(b["narrator_info"])
                     for narrator in narrators.values():
                         book.narrators.append(myx_classes.Contributor(str(narrator)))
