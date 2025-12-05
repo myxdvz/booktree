@@ -30,7 +30,7 @@ A copy of default_config.cfg can be found under the /templates folder.  It is re
             "hardlink": 1 
         },
         "target_path": {
-            "multi_author": "first_author",
+            "multi_author": "{first_author}",
             "in_series": "{author}/{series}/{series} #{part} - {title}",
             "no_series": "{author}/{title}",
             "disc_folder": "{title} {disc}"
