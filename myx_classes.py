@@ -306,7 +306,8 @@ class BookFile:
         in_series = cfg.get("Config/target_path/in_series")
         no_series = cfg.get("Config/target_path/no_series")
         disc_folder = cfg.get("Config/target_path/disc_folder")
-
+        
+        if (book is not None):
             # Get primary author
             if ((book.authors is not None) and (len(book.authors) == 0)):
                 author = "Unknown"
