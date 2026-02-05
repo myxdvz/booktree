@@ -302,27 +302,64 @@ class BookFile:
         #Config
         media_path = self.mediaPath
         multi_author = cfg.get("Config/target_path/multi_author")
+        priority = cfg.get("Config/target_path/priority_authors")
         in_series = cfg.get("Config/target_path/in_series")
         no_series = cfg.get("Config/target_path/no_series")
         disc_folder = cfg.get("Config/target_path/disc_folder")
 
-        if (book is not None):
-            #Get primary author
+            # Get primary author
             if ((book.authors is not None) and (len(book.authors) == 0)):
-                author="Unknown"
-            elif ((book.authors is not None) and (len(book.authors) > 1) and (multi_author is not None)):
-                    match multi_author:
-                        case "{first_author}": 
-                            author=book.authors[0].name  
-                        
-                        case "{authors}":
-                            author=book.getAuthors()
-
-                        case _: 
-                            author=multi_author
+                author = "Unknown"
             else:
-                author=book.authors[0].name
+                # Build normalized list of preferred authors from config
+                preferred = None
+                if priority and len(book.authors):
+                    if isinstance(priority, str):
+                        prefs = [p.strip() for p in re.split(r',\s*', priority) if p.strip()]
+                    else:
+                        prefs = [str(p).strip() for p in priority if str(p).strip()]
 
+                    # Normalize and search preferences in order
+                    norm_prefs = [myx_utilities.cleanseAuthor(p).lower() for p in prefs]
+                    # prepare normalized author names and originals
+                    authors_norm = []
+                    for a in book.authors:
+                        an = (a.name or "").strip()
+                        authors_norm.append((an, myx_utilities.cleanseAuthor(an).lower()))
+
+                    # First try whole-word match (preferred), then substring fallback
+                    for pref in norm_prefs:
+                        pref_re = re.compile(rf'\b{re.escape(pref)}\b', flags=re.IGNORECASE)
+                        for orig, an_norm in authors_norm:
+                            if pref_re.search(an_norm):
+                                preferred = orig
+                                break
+                        if preferred:
+                            break
+
+                    if not preferred:
+                        # fallback substring check (either direction) on normalized strings
+                        for pref in norm_prefs:
+                            for orig, an_norm in authors_norm:
+                                if pref == an_norm or pref in an_norm or an_norm in pref:
+                                    preferred = orig
+                                    break
+                            if preferred:
+                                break
+
+                if preferred:
+                    author = preferred
+                elif ((book.authors is not None) and (len(book.authors) > 1) and (multi_author is not None)):
+                    match multi_author:
+                        case "{first_author}":
+                            author = book.authors[0].name
+                        case "{authors}":
+                            author = book.getAuthors()
+                        case _:
+                            author = multi_author
+                else:
+                    author = book.authors[0].name
+                    
             #standardize author name (replace . with space, and then make sure that there's only single space)
             if len(author):
                 author=myx_utilities.cleanseAuthor(author)
