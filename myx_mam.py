@@ -20,7 +20,7 @@ def searchMAM(cfg, titleFilename, authors, extension):
         authors = f"({authors})"
 
     if len(titleFilename):
-        titleFilename = f"({titleFilename})"
+        titleFilename = f'("{titleFilename}")'
 
     search = f'{authors} {titleFilename} {extension} @dummy mamDummy'
 
