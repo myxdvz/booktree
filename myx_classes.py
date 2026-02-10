@@ -364,6 +364,10 @@ class BookFile:
 
             sPath = ""
             if len(book.series):
+                #check if the user included the title in the series path
+                if (("{title}" not in in_series) and ("{cleanTitle}" not in in_series)):
+                    in_series = os.path.join(in_series, "{title}")
+
                 x = in_series.format (**tokens)
                 #use in_series format
                 for p in x.split ("/"):
