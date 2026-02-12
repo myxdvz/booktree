@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "booktree"
+version = "2.2.0"
+description = "Reorganize your audiobooks using ID3 or Audible metadata into a tree structure."
+requires-python = ">=3.10"
+
+dependencies = [
+    "httpx==0.27.0",
+    "langcodes==3.4.0",
+    "pathvalidate==3.2.0",
+    "Requests==2.32.3",
+    "thefuzz==0.22.1",
+]
+
+[project.scripts]
+booktree = "booktree:cli_main"
+
+[tool.setuptools]
+py-modules = [
+    "booktree",
+    "myx_args",
+    "myx_audible",
+    "myx_classes",
+    "myx_mam",
+    "myx_torrent",
+    "myx_utilities",
+]
