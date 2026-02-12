@@ -12,6 +12,7 @@ def searchMAM(cfg, titleFilename, authors, extension):
     #Config
     session = cfg.get("Config/session")
     log_path = cfg.get("Config/log_path")
+    proxy = cfg.get("Config/proxy")
     ebook = bool(cfg.get("Config/flags/ebooks"))
     audiobook = not (ebook)
     
@@ -36,6 +37,11 @@ def searchMAM(cfg, titleFilename, authors, extension):
         #save cookie for future use
         cookies_filepath = os.path.join(log_path, 'cookies.pkl')
         sess = requests.Session()
+
+        #set proxy if provided
+        if proxy:
+            proxies = {'http': proxy, 'https': proxy}
+            sess.proxies.update(proxies)
 
         #a cookie file exists, use that
         if os.path.exists(cookies_filepath):
@@ -149,12 +155,17 @@ def getMAMBook(cfg, titleFilename="", authors="", extension=""):
 
     return books
 
-def testSessionCookie(mySession):
+def testSessionCookie(mySession, proxy=None):
     isSessionCookieValid = False
 
     #test session and cookie
     #print (f"Cookie: {mySession}")
     try:
+        #set proxy if provided
+        if proxy:
+            proxies = {'http': proxy, 'https': proxy}
+            mySession.proxies.update(proxies)
+
         #Hit cookieCheck API, https://www.myanonamouse.net/json/checkCookie.php
         r = mySession.get('https://www.myanonamouse.net/json/checkCookie.php', timeout=5)  # test cookie    
 
@@ -173,11 +184,17 @@ def checkMAMCookie(cfg):
     #Config
     session = cfg.get("Config/session")
     log_path = cfg.get("Config/log_path")
+    proxy = cfg.get("Config/proxy")
 
     isCookieValid = False
     useConfigSession = False
     cookies_filepath = os.path.join(log_path, 'cookies.pkl')
     sess = requests.Session()
+
+    #set proxy if provided
+    if proxy:
+        proxies = {'http': proxy, 'https': proxy}
+        sess.proxies.update(proxies)
 
     #Check if a cookie file exists
     if os.path.exists(cookies_filepath):
@@ -185,7 +202,7 @@ def checkMAMCookie(cfg):
         #If it does, create a session, using this cookie
         cookies = pickle.load(open(cookies_filepath, 'rb'))
         sess.cookies = cookies
-        isCookieValid = testSessionCookie (sess)
+        isCookieValid = testSessionCookie (sess, proxy)
 
         #if the session cookie is NOT Valid
         if (not isCookieValid):
@@ -202,7 +219,7 @@ def checkMAMCookie(cfg):
     if (useConfigSession):
         if (session is not None) and len(session):
             sess.headers.update({"cookie": f"mam_id={session}"})
-            isCookieValid = testSessionCookie (sess)
+            isCookieValid = testSessionCookie (sess, proxy)
 
         else:
             print (f"No session ID found in the config... Please go to MAM Preferences > Security to create a new session")

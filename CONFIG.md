@@ -53,6 +53,7 @@ A copy of default_config.cfg can be found under the /templates folder.  It is re
 | log_path    |         | Where your log files will be saved. If not set, will default to "logs" | /logs (for docker), logs (for local)   |
 | cache_path  |         | Where your log files will be saved. If not set, will default to "logs" | /config   |
 | session     |         | MAM Session ID (can be removed once one has been saved) |    |
+| proxy     |         | http proxy used to connect to MAM hostname:port (eg 127.0.0.1:8888) |    |
 | paths       |         | This is a *list* of folders and files to be processed              |
 | | files               | File patterns to be searched | ["\*\*/\*.m4b", "\*\*/\*.mp3", "\*\*/\*.m4a"]    |
 | | source_path         | Unorganized folder location | /path/to/downloads   |

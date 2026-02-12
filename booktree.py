@@ -11,6 +11,7 @@ import myx_mam
 import myx_args
 import csv
 import httpx
+import requests
 
 #Main Functions
 def buildTreeFromLog(files, logfile, cfg):
@@ -361,8 +362,10 @@ def main(cfg):
         else:
             print(f"Your source and media paths are invalid. Please check and try again!\nSource:{path}\nMedia:{mediaPath}")
 
-if __name__ == "__main__":
-    
+
+# Entry point for pip install -e .
+def cli_main():
+    """CLI entry point for the booktree command"""
     if not sys.version_info > (3, 10):
         print ("booktree requires python 3.10 or higher. Please upgrade your version")
     else:
@@ -377,6 +380,14 @@ if __name__ == "__main__":
 
             except Exception as e:
                 raise Exception(f"\nThere was a problem reading your config file {myx_args.params.config_file}: {e}\n")
+            
+            proxy = cfg.get("Config/proxy")
+            if proxy:
+                s = requests.Session()
+                proxies = {'http': proxy, 'https': proxy}
+                s.proxies.update(proxies)
+                ipinfo = s.get('https://ipwho.is/').json()
+                print(f"Proxy Configured:\nIP: {ipinfo['ip']} country: {ipinfo['country']}")
             
             #check metadata source
             metadata = cfg.get("Config/metadata")
@@ -394,22 +405,5 @@ if __name__ == "__main__":
         else:
             print(f"\nYour config path is invalid. Please check and try again!\n\tConfig file path:{myx_args.params.config_file}\n")
 
-
-
-
-
-
-        
-
-
-
-
-
-
-        
-        
-
-
- 
-
-
+if __name__ == "__main__":
+    cli_main()
