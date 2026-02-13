@@ -12,6 +12,8 @@ def searchMAM(cfg, titleFilename, authors, extension):
     #Config
     session = cfg.get("Config/session")
     log_path = cfg.get("Config/log_path")
+    verbose = bool(cfg.get("Config/flags/verbose"))
+
     ebook = bool(cfg.get("Config/flags/ebooks"))
     audiobook = not (ebook)
     
@@ -78,6 +80,9 @@ def searchMAM(cfg, titleFilename, authors, extension):
                     },
                     "perpage":50
                 }
+
+                if (verbose):
+                    print(f'Search: {search}')
 
                 try:
                     r = sess.post('https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php', json=params)
