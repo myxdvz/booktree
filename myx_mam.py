@@ -19,10 +19,10 @@ def searchMAM(cfg, titleFilename, authors, extension):
     
     #put paren around authors and titleFilename
     if len(authors):
-        authors = f"({authors})"
+        authors = f'({escaped_string(authors)})'
 
     if len(titleFilename):
-        titleFilename = f'("{titleFilename}")'
+        titleFilename = f'("{escaped_string(titleFilename)}")'
 
     search = f'{authors} {titleFilename} {extension} @dummy mamDummy'
 
@@ -214,3 +214,23 @@ def checkMAMCookie(cfg):
         
 
     return isCookieValid
+
+def escape_string(input_string):  
+    """Escapes special characters in a string by prefixing them with a backslash.
+
+    Args:  
+        input_string: The string to escape.
+
+    Returns:  
+        A new string with the special characters escaped.  
+    """  
+    escaped_string = ""  
+    special_chars = ['!', '"', '$', "'", '(', ')', '-', '/', '<', '@', '\\', '^', '|', '~']  
+    for char in input_string:  
+        if char in special_chars:  
+            escaped_string += "\\" + char  
+        else:  
+            escaped_string += char  
+
+    return escaped_string  
+
