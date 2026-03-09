@@ -19,10 +19,10 @@ def searchMAM(cfg, titleFilename, authors, extension):
     
     #put paren around authors and titleFilename
     if len(authors):
-        authors = f'({escaped_string(authors)})'
+        authors = f'({escape_string(authors)})'
 
     if len(titleFilename):
-        titleFilename = f'("{escaped_string(titleFilename)}")'
+        titleFilename = f'("{escape_string(titleFilename)}")'
 
     search = f'{authors} {titleFilename} {extension} @dummy mamDummy'
 
