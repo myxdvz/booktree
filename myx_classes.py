@@ -788,7 +788,7 @@ class MAMBook:
         fuzzy_match = cfg.get("Config/fuzzy_match")
 
         #search MAM record for this book
-        title = f'"{bookFile.getFileName()}"'
+        title = f'{bookFile.getFileName()}'
         authors=self.ffprobeBook.getAuthors(delimiter="|", encloser='"', stripaccents=False)
         extension = f'"{bookFile.getExtension()}"'
     

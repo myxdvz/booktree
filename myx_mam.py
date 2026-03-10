@@ -12,15 +12,17 @@ def searchMAM(cfg, titleFilename, authors, extension):
     #Config
     session = cfg.get("Config/session")
     log_path = cfg.get("Config/log_path")
+    verbose = bool(cfg.get("Config/flags/verbose"))
+
     ebook = bool(cfg.get("Config/flags/ebooks"))
     audiobook = not (ebook)
     
     #put paren around authors and titleFilename
     if len(authors):
-        authors = f"({authors})"
+        authors = f'({authors})'
 
     if len(titleFilename):
-        titleFilename = f"({titleFilename})"
+        titleFilename = f'("{escape_string(titleFilename)}")'
 
     search = f'{authors} {titleFilename} {extension} @dummy mamDummy'
 
@@ -78,6 +80,9 @@ def searchMAM(cfg, titleFilename, authors, extension):
                     },
                     "perpage":50
                 }
+
+                if (verbose):
+                    print(f'Search: {search}')
 
                 try:
                     r = sess.post('https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php', json=params)
@@ -209,3 +214,23 @@ def checkMAMCookie(cfg):
         
 
     return isCookieValid
+
+def escape_string(input_string):  
+    """Escapes special characters in a string by prefixing them with a backslash.
+
+    Args:  
+        input_string: The string to escape.
+
+    Returns:  
+        A new string with the special characters escaped.  
+    """  
+    escaped_string = ""  
+    special_chars = ['!', '"', '$', "'", '(', ')', '-', '/', '<', '@', '\\', '^', '|', '~']  
+    for char in input_string:  
+        if char in special_chars:  
+            escaped_string += "\\" + char  
+        else:  
+            escaped_string += char  
+
+    return escaped_string  
+
